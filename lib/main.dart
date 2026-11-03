@@ -6,7 +6,10 @@ import 'features/pos/presentation/screens/pos_dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inisialisasi Dependency Injection (GetIt, SharedPreferences, Dio, Stores)
   await di.initInjections();
+
   runApp(const MyApp());
 }
 
@@ -24,6 +27,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
       ),
+      // Cek apakah user sudah memiliki token aktif di SharedPreferences
       home: FutureBuilder(
         future: authStore.checkAuthStatus(),
         builder: (context, snapshot) {
@@ -33,12 +37,12 @@ class MyApp extends StatelessWidget {
             );
           }
 
-          // Jika token masih valid di SharedPreferences -> Langsung ke Dashboard
+          // Jika sudah login, langsung masuk ke Dashboard POS
           if (authStore.isAuthenticated) {
             return const PosDashboardScreen();
           }
 
-          // Jika belum login -> Ke LoginScreen
+          // Jika belum, tampilkan halaman Login
           return const LoginScreen();
         },
       ),
