@@ -9,19 +9,19 @@ part of 'abc_store.dart';
 // ignore_for_file: non_constant_identifier_names, unnecessary_brace_in_string_interps, unnecessary_lambdas, prefer_expression_function_bodies, lines_longer_than_80_chars, avoid_as, avoid_annotating_with_dynamic, no_leading_underscores_for_local_identifiers
 
 mixin _$ABCStore on _ABCStoreBase, Store {
-  late final _$bundlesAtom =
-      Atom(name: '_ABCStoreBase.bundles', context: context);
+  late final _$bundleAtom =
+      Atom(name: '_ABCStoreBase.bundle', context: context);
 
   @override
-  ObservableList<BundleModel> get bundles {
-    _$bundlesAtom.reportRead();
-    return super.bundles;
+  BundleModel? get bundle {
+    _$bundleAtom.reportRead();
+    return super.bundle;
   }
 
   @override
-  set bundles(ObservableList<BundleModel> value) {
-    _$bundlesAtom.reportWrite(value, super.bundles, () {
-      super.bundles = value;
+  set bundle(BundleModel? value) {
+    _$bundleAtom.reportWrite(value, super.bundle, () {
+      super.bundle = value;
     });
   }
 
@@ -68,7 +68,7 @@ mixin _$ABCStore on _ABCStoreBase, Store {
   @override
   String toString() {
     return '''
-bundles: ${bundles},
+bundle: ${bundle},
 isLoading: ${isLoading},
 errorMessage: ${errorMessage}
     ''';

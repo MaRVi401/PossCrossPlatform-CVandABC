@@ -2,7 +2,7 @@
 
 import 'package:mobx/mobx.dart';
 import '../../data/models/bundle_model.dart';
-import '../../data/datasources/abc_remote_datasource.dart'; // <-- Gunakan ABCRemoteDataSource
+import '../../data/datasources/abc_remote_datasource.dart';
 
 part 'abc_store.g.dart';
 
@@ -14,7 +14,7 @@ abstract class _ABCStoreBase with Store {
   _ABCStoreBase(this.remoteDataSource);
 
   @observable
-  ObservableList<BundleModel> bundles = ObservableList<BundleModel>();
+  BundleModel? bundle;
 
   @observable
   bool isLoading = false;
@@ -29,7 +29,7 @@ abstract class _ABCStoreBase with Store {
 
     try {
       final result = await remoteDataSource.generateBundleRecommendations();
-      bundles = ObservableList.of(result);
+      bundle = result;
       isLoading = false;
     } catch (e) {
       errorMessage = e.toString().replaceAll('Exception: ', '');

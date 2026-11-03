@@ -128,6 +128,20 @@ class PosDashboardScreen extends StatelessWidget {
                 children: [
                   _buildMenuCard(
                     context,
+                    title: 'CCTV Analytics',
+                    subtitle: 'Real-time Visitor Analytics',
+                    icon: Icons.videocam_rounded,
+                    color: Colors.blue.shade700,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const CCTVAnalyticsScreen()),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
                     title: 'Kategori Produk',
                     subtitle: 'Kelola Jenis Produk',
                     icon: Icons.category_rounded,
@@ -140,7 +154,6 @@ class PosDashboardScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  // --- 3. TAMBAHKAN KARTU MENU PRODUK DI GRIDVIEW ---
                   _buildMenuCard(
                     context,
                     title: 'Manajemen Produk',
@@ -152,20 +165,6 @@ class PosDashboardScreen extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                             builder: (_) => const ProductScreen()),
-                      );
-                    },
-                  ),
-                  _buildMenuCard(
-                    context,
-                    title: 'CCTV Analytics',
-                    subtitle: 'Real-time Visitor Analytics',
-                    icon: Icons.videocam_rounded,
-                    color: Colors.blue.shade700,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const CCTVAnalyticsScreen()),
                       );
                     },
                   ),
