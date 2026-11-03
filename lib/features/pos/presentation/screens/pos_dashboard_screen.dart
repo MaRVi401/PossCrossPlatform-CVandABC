@@ -6,6 +6,7 @@ import '../../../auth/presentation/stores/auth_store.dart';
 import '../../../katalog/presentation/screens/category_screen.dart';
 import '../../../katalog/presentation/screens/product_screen.dart';
 import '../../../katalog/presentation/screens/abc_bundle_screen.dart';
+import '../../../katalog/presentation/screens/stock_adjustment_screen.dart';
 
 class PosDashboardScreen extends StatelessWidget {
   const PosDashboardScreen({super.key});
@@ -59,7 +60,6 @@ class PosDashboardScreen extends StatelessWidget {
                 );
               },
             ),
-            // --- 2. TAMBAHKAN MENU PRODUK DI DRAWER ---
             ListTile(
               leading: const Icon(Icons.inventory_2_rounded),
               title: const Text('Manajemen Produk'),
@@ -68,6 +68,30 @@ class PosDashboardScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const ProductScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.auto_awesome_rounded,
+                  color: Colors.amber.shade800),
+              title: const Text('Bundle ABC'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ABCBundleScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.tune_rounded, color: Colors.purple.shade700),
+              title: const Text('Penyesuaian Stok'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const StockAdjustmentScreen()),
                 );
               },
             ),
@@ -192,6 +216,20 @@ class PosDashboardScreen extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                             builder: (_) => const ABCBundleScreen()),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
+                    title: 'Penyesuaian Stok',
+                    subtitle: 'Kelola Masuk / Keluar',
+                    icon: Icons.tune_rounded,
+                    color: Colors.purple.shade700,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const StockAdjustmentScreen()),
                       );
                     },
                   ),
