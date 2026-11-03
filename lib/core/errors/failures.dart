@@ -1,12 +1,12 @@
 abstract class Failure {
   final String message;
-  Failure(this.message);
+  const Failure(this.message);
 }
 
 class ServerFailure extends Failure {
-  ServerFailure(super.message);
+  const ServerFailure(super.message);
 }
 
 class NetworkFailure extends Failure {
-  NetworkFailure([super.message = "Koneksi internet terputus"]);
+  const NetworkFailure([super.message = 'Koneksi terputus']);
 }

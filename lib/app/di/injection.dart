@@ -1,39 +1,33 @@
 import 'package:get_it/get_it.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/network/api_client.dart';
+import '../../features/auth/data/datasources/auth_remote_datasource.dart';
+import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/presentation/stores/auth_store.dart';
-import '../../features/pos/data/datasources/pos_remote_datasource.dart';
-import '../../features/pos/data/repositories/pos_repository_impl.dart';
-import '../../features/pos/domain/repositories/pos_repository.dart';
-import '../../features/pos/domain/usecases/get_products_usecase.dart';
-import '../../features/pos/presentation/stores/pos_store.dart';
 
 final sl = GetIt.instance;
 
-void setupDependencyInjection(String baseUrl) {
-  // Core Network Client
-  sl.registerLazySingleton<Dio>(() => Dio(
-        BaseOptions(
-          baseUrl: baseUrl,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 10),
-          headers: {'Accept': 'application/json'},
-        ),
-      ));
+Future<void> initInjections() async {
+  // SharedPreferences
+  final sharedPreferences = await SharedPreferences.getInstance();
+  sl.registerLazySingleton<SharedPreferences>(() => sharedPreferences);
 
-  // Data Sources
-  sl.registerLazySingleton<POSRemoteDataSource>(
-    () => POSRemoteDataSourceImpl(dio: sl()),
+  // Core & Network API Client
+  sl.registerLazySingleton<Dio>(() => Dio());
+  sl.registerLazySingleton<ApiClient>(() => ApiClient(sl()));
+
+  // Auth Injection
+  sl.registerLazySingleton<AuthRemoteDataSource>(
+    () => AuthRemoteDataSourceImpl(dio: sl<ApiClient>().client),
   );
-
-  // Repositories
-  sl.registerLazySingleton<POSRepository>(
-    () => POSRepositoryImpl(remoteDataSource: sl()),
+  sl.registerLazySingleton<AuthRepository>(
+    () => AuthRepositoryImpl(
+      remoteDataSource: sl(),
+      prefs: sl(),
+    ),
   );
-
-  // Use Cases
-  sl.registerLazySingleton(() => GetProductsUseCase(sl()));
-
-  // MobX Stores
-  sl.registerLazySingleton(() => AuthStore(dio: sl()));
-  sl.registerFactory(() => POSStore(getProductsUseCase: sl()));
+  sl.registerLazySingleton<AuthStore>(
+    () => AuthStore(sl()),
+  );
 }

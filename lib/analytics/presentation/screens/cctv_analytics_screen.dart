@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import '../../../../shared/widgets/main_drawer.dart';
 
 class CCTVAnalyticsScreen extends StatefulWidget {
   const CCTVAnalyticsScreen({super.key});
@@ -63,7 +62,6 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
         title: const Text('Real-time CCTV & Visitor Analytics'),
         elevation: 1,
       ),
-      drawer: const MainDrawer(currentRoute: '/dashboard'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(

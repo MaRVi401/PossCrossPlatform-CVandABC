@@ -1,16 +1,17 @@
-import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart'; // Import untuk debugPrint
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:mobx/mobx.dart';
+import '../../data/models/user_model.dart';
+import '../../data/repositories/auth_repository_impl.dart';
 
 part 'auth_store.g.dart';
 
-// ignore: library_private_types_in_public_api
-class AuthStore = _AuthStore with _$AuthStore;
+class AuthStore = _AuthStoreBase with _$AuthStore;
 
-abstract class _AuthStore with Store {
-  final Dio dio;
+abstract class _AuthStoreBase with Store {
+  final AuthRepository _repository;
 
-  _AuthStore({required this.dio});
+  _AuthStoreBase(this._repository);
 
   @observable
   bool isLoading = false;
@@ -19,51 +20,83 @@ abstract class _AuthStore with Store {
   String? errorMessage;
 
   @observable
-  String? token;
+  UserModel? currentUser;
+
+  @observable
+  bool isAuthenticated = false;
 
   @action
   Future<bool> login(String email, String password) async {
     isLoading = true;
     errorMessage = null;
 
-    try {
-      final response = await dio.post('/auth/login', data: {
-        'email': email,
-        'password': password,
-      });
+    final result = await _repository.login(email, password);
 
-      // Mengganti print() dengan debugPrint()
-      debugPrint('RESPONSE LARAVEL LOGIN: ${response.data}');
+    return result.fold(
+      (failure) {
+        isLoading = false;
+        errorMessage = failure.message;
+        isAuthenticated = false;
+        return false;
+      },
+      (user) {
+        isLoading = false;
+        currentUser = user;
+        isAuthenticated = true;
+        return true;
+      },
+    );
+  }
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = response.data;
+  @action
+  Future<bool> register({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+    String? address,
+  }) async {
+    isLoading = true;
+    errorMessage = null;
 
-        token = responseData['token'] ??
-            responseData['access_token'] ??
-            responseData['data']?['token'] ??
-            responseData['data']?['access_token'] ??
-            responseData['authorisation']?['token'] ??
-            responseData['result']?['token'];
+    final result = await _repository.register(
+      name: name,
+      email: email,
+      password: password,
+      phone: phone,
+      address: address,
+    );
 
-        if (token != null) {
-          dio.options.headers['Authorization'] = 'Bearer $token';
-          isLoading = false;
-          return true;
-        }
-      }
+    return result.fold(
+      (failure) {
+        isLoading = false;
+        errorMessage = failure.message;
+        isAuthenticated = false;
+        return false;
+      },
+      (user) {
+        isLoading = false;
+        currentUser = user;
+        isAuthenticated = true;
+        return true;
+      },
+    );
+  }
 
-      errorMessage = 'Format response token tidak sesuai';
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        errorMessage = 'Email atau password salah';
-      } else {
-        errorMessage = e.response?.data['message'] ?? 'Gagal terhubung ke server';
-      }
-    } catch (e) {
-      errorMessage = 'Terjadi kesalahan: ${e.toString()}';
-    }
-
+  @action
+  Future<void> logout() async {
+    isLoading = true;
+    await _repository.logout();
+    currentUser = null;
+    isAuthenticated = false;
     isLoading = false;
-    return false;
+  }
+
+  @action
+  Future<void> checkAuthStatus() async {
+    isAuthenticated = await _repository.isLoggedIn();
+    if (isAuthenticated) {
+      currentUser = await _repository.getSavedUser();
+    }
   }
 }

@@ -1,42 +1,47 @@
 import 'package:flutter/material.dart';
+import 'app/di/injection.dart' as di;
 import 'features/auth/presentation/screens/login_screen.dart';
-import 'analytics/presentation/screens/cctv_analytics_screen.dart';
-import 'features/katalog/presentation/screens/category_screen.dart';
-import 'features/katalog/presentation/screens/product_screen.dart';
-import 'features/katalog/presentation/screens/stock_adjustment_screen.dart';
-import 'features/pos/presentation/screens/pos_screen.dart';
-import 'features/laporan/presentation/screens/report_screen.dart';
-import 'features/abc/prensentation/screens/abc_optimization_screen.dart';
-import 'features/pengguna/presentation/screens/customer_screen.dart';
+import 'features/auth/presentation/stores/auth_store.dart';
+import 'features/pos/presentation/screens/pos_dashboard_screen.dart';
 
-void main() {
-  runApp(const PosApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await di.initInjections();
+  runApp(const MyApp());
 }
 
-class PosApp extends StatelessWidget {
-  const PosApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final authStore = di.sl<AuthStore>();
+
     return MaterialApp(
-      title: 'POS Ecosystem',
+      title: 'POS Cross Platform CV & ABC',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4F46E5)),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
       ),
-      initialRoute: '/dashboard',
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/dashboard': (context) => const CCTVAnalyticsScreen(),
-        '/categories': (context) => const CategoryScreen(),
-        '/products': (context) => const ProductScreen(),
-        '/stock-adjustments': (context) => const StockAdjustmentScreen(),
-        '/pos': (context) => const PosScreen(),
-        '/reports': (context) => const ReportScreen(),
-        '/abc': (context) => const AbcOptimizationScreen(),
-        '/customers': (context) => const CustomerScreen(),
-      },
+      home: FutureBuilder(
+        future: authStore.checkAuthStatus(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          // Jika token masih valid di SharedPreferences -> Langsung ke Dashboard
+          if (authStore.isAuthenticated) {
+            return const PosDashboardScreen();
+          }
+
+          // Jika belum login -> Ke LoginScreen
+          return const LoginScreen();
+        },
+      ),
     );
   }
 }
