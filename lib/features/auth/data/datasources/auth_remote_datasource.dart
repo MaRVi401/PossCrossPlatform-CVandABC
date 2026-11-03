@@ -29,17 +29,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         },
       );
 
-      print('RESPONSE LOGIN DARI SERVER: ${response.data}');
-
       final data = response.data['data'];
       final token = data['access_token'];
       final userData = data['user'];
 
-      print('TOKEN BERHASIL DIDAPATKAN: $token'); 
-
       return UserModel.fromJson(userData, token: token);
     } on DioException catch (e) {
-      print('DIO ERROR LOGIN: ${e.response?.statusCode} - ${e.response?.data}');
       if (e.response != null && e.response?.data != null) {
         final msg = e.response?.data['message'] ?? 'Terjadi kesalahan pada server';
         throw Exception(msg);

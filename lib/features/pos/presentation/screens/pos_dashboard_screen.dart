@@ -4,6 +4,7 @@ import '../../../../app/di/injection.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
 import '../../../auth/presentation/stores/auth_store.dart';
 import '../../../katalog/presentation/screens/category_screen.dart';
+import '../../../katalog/presentation/screens/product_screen.dart';
 
 class PosDashboardScreen extends StatelessWidget {
   const PosDashboardScreen({super.key});
@@ -30,13 +31,8 @@ class PosDashboardScreen extends StatelessWidget {
               currentAccountPicture: CircleAvatar(
                 backgroundColor: Colors.white,
                 child: Text(
-                  (user?.name.isNotEmpty == true)
-                      ? user!.name[0].toUpperCase()
-                      : 'A',
-                  style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.indigo),
+                  (user?.name.isNotEmpty == true) ? user!.name[0].toUpperCase() : 'A',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.indigo),
                 ),
               ),
             ),
@@ -47,22 +43,43 @@ class PosDashboardScreen extends StatelessWidget {
               onTap: () => Navigator.pop(context),
             ),
             ListTile(
+              leading: const Icon(Icons.category_rounded),
+              title: const Text('Kategori Produk'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CategoryScreen()),
+                );
+              },
+            ),
+            // --- 2. TAMBAHKAN MENU PRODUK DI DRAWER ---
+            ListTile(
+              leading: const Icon(Icons.inventory_2_rounded),
+              title: const Text('Manajemen Produk'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProductScreen()),
+                );
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.videocam_outlined),
               title: const Text('CCTV Analytics'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const CCTVAnalyticsScreen()),
+                  MaterialPageRoute(builder: (_) => const CCTVAnalyticsScreen()),
                 );
               },
             ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.redAccent),
-              title: const Text('Keluar',
-                  style: TextStyle(color: Colors.redAccent)),
+              title: const Text('Keluar', style: TextStyle(color: Colors.redAccent)),
               onTap: () async {
                 await authStore.logout();
                 if (context.mounted) {
@@ -103,6 +120,33 @@ class PosDashboardScreen extends StatelessWidget {
                 children: [
                   _buildMenuCard(
                     context,
+                    title: 'Kategori Produk',
+                    subtitle: 'Kelola Jenis Produk',
+                    icon: Icons.category_rounded,
+                    color: Colors.teal.shade700,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const CategoryScreen()),
+                      );
+                    },
+                  ),
+                  // --- 3. TAMBAHKAN KARTU MENU PRODUK DI GRIDVIEW ---
+                  _buildMenuCard(
+                    context,
+                    title: 'Manajemen Produk',
+                    subtitle: 'Kelola Barang & Stok',
+                    icon: Icons.inventory_2_rounded,
+                    color: Colors.indigo.shade700,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ProductScreen()),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
                     title: 'CCTV Analytics',
                     subtitle: 'Real-time Visitor Analytics',
                     icon: Icons.videocam_rounded,
@@ -110,8 +154,7 @@ class PosDashboardScreen extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => const CCTVAnalyticsScreen()),
+                        MaterialPageRoute(builder: (_) => const CCTVAnalyticsScreen()),
                       );
                     },
                   ),
@@ -123,22 +166,7 @@ class PosDashboardScreen extends StatelessWidget {
                     color: Colors.orange.shade800,
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Modul POS akan dibuat selanjutnya')),
-                      );
-                    },
-                  ),
-                  _buildMenuCard(
-                    context,
-                    title: 'Kategori Produk',
-                    subtitle: 'Kelola Jenis Produk',
-                    icon: Icons.category_rounded,
-                    color: Colors.teal.shade700,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const CategoryScreen()),
+                        const SnackBar(content: Text('Modul POS akan dibuat selanjutnya')),
                       );
                     },
                   ),
@@ -177,8 +205,7 @@ class PosDashboardScreen extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold, color: color),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
             ),
             const SizedBox(height: 4),
             Text(

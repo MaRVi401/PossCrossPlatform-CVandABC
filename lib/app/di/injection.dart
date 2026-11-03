@@ -13,6 +13,11 @@ import '../../features/katalog/data/datasources/category_remote_datasource.dart'
 import '../../features/katalog/data/repositories/category_repository_impl.dart';
 import '../../features/katalog/presentation/stores/category_store.dart';
 
+// Produk Imports
+import '../../features/katalog/data/datasources/product_remote_datasource.dart';
+import '../../features/katalog/data/repositories/product_repository_impl.dart';
+import '../../features/katalog/presentation/stores/product_store.dart';
+
 final sl = GetIt.instance;
 
 Future<void> initInjections() async {
@@ -43,5 +48,13 @@ Future<void> initInjections() async {
   sl.registerLazySingleton<CategoryStore>(
     () => CategoryStore(sl()),
   );
-  // ----------------------------------------------------
+
+  // Product Injection
+  sl.registerLazySingleton<ProductRemoteDataSource>(
+    () => ProductRemoteDataSourceImpl(dio: sl<ApiClient>().client),
+  );
+  sl.registerLazySingleton<ProductRepository>(
+    () => ProductRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton<ProductStore>(() => ProductStore(sl()));
 }
