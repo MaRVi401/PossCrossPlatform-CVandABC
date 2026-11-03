@@ -18,6 +18,10 @@ import '../../features/katalog/data/datasources/product_remote_datasource.dart';
 import '../../features/katalog/data/repositories/product_repository_impl.dart';
 import '../../features/katalog/presentation/stores/product_store.dart';
 
+// Pos Generate ABC
+import '../../features/katalog/data/datasources/abc_remote_datasource.dart';
+import '../../features/katalog/presentation/stores/abc_store.dart';
+
 final sl = GetIt.instance;
 
 Future<void> initInjections() async {
@@ -57,4 +61,12 @@ Future<void> initInjections() async {
     () => ProductRepositoryImpl(remoteDataSource: sl()),
   );
   sl.registerLazySingleton<ProductStore>(() => ProductStore(sl()));
+
+  // ABC Injection
+  sl.registerLazySingleton<ABCRemoteDataSource>(
+    () => ABCRemoteDataSourceImpl(dio: sl<ApiClient>().client),
+  );
+  sl.registerLazySingleton<ABCStore>(
+    () => ABCStore(sl<ABCRemoteDataSource>()),
+  );
 }

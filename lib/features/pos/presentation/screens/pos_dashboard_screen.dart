@@ -5,6 +5,7 @@ import '../../../auth/presentation/screens/login_screen.dart';
 import '../../../auth/presentation/stores/auth_store.dart';
 import '../../../katalog/presentation/screens/category_screen.dart';
 import '../../../katalog/presentation/screens/product_screen.dart';
+import '../../../katalog/presentation/screens/abc_bundle_screen.dart';
 
 class PosDashboardScreen extends StatelessWidget {
   const PosDashboardScreen({super.key});
@@ -31,8 +32,13 @@ class PosDashboardScreen extends StatelessWidget {
               currentAccountPicture: CircleAvatar(
                 backgroundColor: Colors.white,
                 child: Text(
-                  (user?.name.isNotEmpty == true) ? user!.name[0].toUpperCase() : 'A',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.indigo),
+                  (user?.name.isNotEmpty == true)
+                      ? user!.name[0].toUpperCase()
+                      : 'A',
+                  style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.indigo),
                 ),
               ),
             ),
@@ -72,14 +78,16 @@ class PosDashboardScreen extends StatelessWidget {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const CCTVAnalyticsScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const CCTVAnalyticsScreen()),
                 );
               },
             ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.redAccent),
-              title: const Text('Keluar', style: TextStyle(color: Colors.redAccent)),
+              title: const Text('Keluar',
+                  style: TextStyle(color: Colors.redAccent)),
               onTap: () async {
                 await authStore.logout();
                 if (context.mounted) {
@@ -127,7 +135,8 @@ class PosDashboardScreen extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const CategoryScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const CategoryScreen()),
                       );
                     },
                   ),
@@ -141,7 +150,8 @@ class PosDashboardScreen extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ProductScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const ProductScreen()),
                       );
                     },
                   ),
@@ -154,7 +164,8 @@ class PosDashboardScreen extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const CCTVAnalyticsScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const CCTVAnalyticsScreen()),
                       );
                     },
                   ),
@@ -166,7 +177,22 @@ class PosDashboardScreen extends StatelessWidget {
                     color: Colors.orange.shade800,
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Modul POS akan dibuat selanjutnya')),
+                        const SnackBar(
+                            content: Text('Modul POS akan dibuat selanjutnya')),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
+                    title: 'Bundle ABC',
+                    subtitle: 'Optimasi Paket Promo',
+                    icon: Icons.auto_awesome_rounded,
+                    color: Colors.amber.shade800,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ABCBundleScreen()),
                       );
                     },
                   ),
@@ -205,7 +231,8 @@ class PosDashboardScreen extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
+              style: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold, color: color),
             ),
             const SizedBox(height: 4),
             Text(
