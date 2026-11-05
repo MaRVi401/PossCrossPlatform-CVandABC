@@ -27,6 +27,10 @@ import '../../features/katalog/data/datasources/stock_adjustment_remote_datasour
 import '../../features/katalog/data/repositories/stock_adjustment_repository_impl.dart';
 import '../../features/katalog/presentation/stores/stock_adjustment_store.dart';
 
+// Pos Transaction
+import '../../features/pos/data/datasources/transaction_remote_datasource.dart';
+import '../../features/pos/presentation/stores/pos_store.dart';
+
 final sl = GetIt.instance;
 
 Future<void> initInjections() async {
@@ -85,4 +89,13 @@ Future<void> initInjections() async {
   sl.registerLazySingleton<StockAdjustmentStore>(
     () => StockAdjustmentStore(sl()),
   );
+
+
+  // Pos Transaction Injection
+sl.registerLazySingleton<TransactionRemoteDataSource>(
+  () => TransactionRemoteDataSourceImpl(dio: sl<ApiClient>().client),
+);
+sl.registerLazySingleton<PosStore>(
+  () => PosStore(sl()),
+);
 }

@@ -7,6 +7,7 @@ import '../../../katalog/presentation/screens/category_screen.dart';
 import '../../../katalog/presentation/screens/product_screen.dart';
 import '../../../katalog/presentation/screens/abc_bundle_screen.dart';
 import '../../../katalog/presentation/screens/stock_adjustment_screen.dart';
+import '../../../pos/presentation/screens/pos_screen.dart';
 
 class PosDashboardScreen extends StatelessWidget {
   const PosDashboardScreen({super.key});
@@ -49,6 +50,30 @@ class PosDashboardScreen extends StatelessWidget {
               selected: true,
               onTap: () => Navigator.pop(context),
             ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.videocam_outlined),
+              title: const Text('CCTV Analytics'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const CCTVAnalyticsScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.auto_awesome_rounded),
+              title: const Text('Bundle ABC'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ABCBundleScreen()),
+                );
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.category_rounded),
               title: const Text('Kategori Produk'),
@@ -72,19 +97,7 @@ class PosDashboardScreen extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: Icon(Icons.auto_awesome_rounded,
-                  color: Colors.amber.shade800),
-              title: const Text('Bundle ABC'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ABCBundleScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.tune_rounded, color: Colors.purple.shade700),
+              leading: const Icon(Icons.tune_rounded),
               title: const Text('Penyesuaian Stok'),
               onTap: () {
                 Navigator.pop(context);
@@ -92,18 +105,6 @@ class PosDashboardScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (_) => const StockAdjustmentScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.videocam_outlined),
-              title: const Text('CCTV Analytics'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const CCTVAnalyticsScreen()),
                 );
               },
             ),
@@ -166,6 +167,20 @@ class PosDashboardScreen extends StatelessWidget {
                   ),
                   _buildMenuCard(
                     context,
+                    title: 'Bundle ABC',
+                    subtitle: 'Optimasi Paket Promo',
+                    icon: Icons.auto_awesome_rounded,
+                    color: Colors.amber.shade800,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ABCBundleScreen()),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
                     title: 'Kategori Produk',
                     subtitle: 'Kelola Jenis Produk',
                     icon: Icons.category_rounded,
@@ -194,33 +209,6 @@ class PosDashboardScreen extends StatelessWidget {
                   ),
                   _buildMenuCard(
                     context,
-                    title: 'Kasir POS',
-                    subtitle: 'Kelola Transaksi',
-                    icon: Icons.point_of_sale_rounded,
-                    color: Colors.orange.shade800,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Modul POS akan dibuat selanjutnya')),
-                      );
-                    },
-                  ),
-                  _buildMenuCard(
-                    context,
-                    title: 'Bundle ABC',
-                    subtitle: 'Optimasi Paket Promo',
-                    icon: Icons.auto_awesome_rounded,
-                    color: Colors.amber.shade800,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ABCBundleScreen()),
-                      );
-                    },
-                  ),
-                  _buildMenuCard(
-                    context,
                     title: 'Penyesuaian Stok',
                     subtitle: 'Kelola Masuk / Keluar',
                     icon: Icons.tune_rounded,
@@ -230,6 +218,20 @@ class PosDashboardScreen extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                             builder: (_) => const StockAdjustmentScreen()),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
+                    title: 'Kasir POS',
+                    subtitle: 'Kelola Transaksi',
+                    icon: Icons.point_of_sale_rounded,
+                    color: Colors.orange.shade800,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const PosScreen()),
                       );
                     },
                   ),
