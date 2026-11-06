@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import '../../../../app/di/injection.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../katalog/presentation/stores/product_store.dart';
 import '../../../katalog/presentation/stores/abc_store.dart';
 import '../stores/pos_store.dart';
@@ -16,6 +17,7 @@ class _PosScreenState extends State<PosScreen> {
   final _productStore = sl<ProductStore>();
   final _abcStore = sl<ABCStore>();
   final _posStore = sl<PosStore>();
+  final _apiClient = sl<ApiClient>();
   final _searchController = TextEditingController();
 
   @override
@@ -32,6 +34,20 @@ class _PosScreenState extends State<PosScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// Membentuk URL gambar lengkap dari baseUrl ApiClient
+  String? _resolveImageUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.isEmpty) return null;
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      return rawUrl;
+    }
+
+    final dioBaseUrl = _apiClient.client.options.baseUrl;
+    final uri = Uri.parse(dioBaseUrl);
+    final origin = '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
+    final cleanPath = rawUrl.startsWith('/') ? rawUrl : '/$rawUrl';
+    return '$origin$cleanPath';
   }
 
   void _showPaymentModal() {
@@ -347,7 +363,6 @@ class _PosScreenState extends State<PosScreen> {
                   flex: 3,
                   child: Observer(
                     builder: (_) {
-                      // Status 1: Sedang memuat data
                       if (_productStore.isLoading &&
                           _productStore.products.isEmpty) {
                         return const Center(
@@ -365,7 +380,6 @@ class _PosScreenState extends State<PosScreen> {
                         );
                       }
 
-                      // Status 2: Data kosong / tidak ada produk cocok
                       if (_productStore.filteredProducts.isEmpty) {
                         return Center(
                           child: Column(
@@ -400,75 +414,140 @@ class _PosScreenState extends State<PosScreen> {
                         );
                       }
 
-                      // Status 3: Menampilkan Grid Produk
                       return GridView.builder(
                         padding: const EdgeInsets.all(8),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          childAspectRatio: 0.85,
+                          childAspectRatio: 0.72,
                           crossAxisSpacing: 8,
                           mainAxisSpacing: 8,
                         ),
                         itemCount: _productStore.filteredProducts.length,
                         itemBuilder: (context, index) {
                           final product = _productStore.filteredProducts[index];
+                          final fullImageUrl = _resolveImageUrl(product.imageUrl);
+
                           return InkWell(
                             onTap: () => _posStore.addToCart(product),
                             borderRadius: BorderRadius.circular(12),
                             child: Card(
                               elevation: 2,
+                              clipBehavior: Clip.antiAlias,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: product.stockQuantity < 5
-                                            ? Colors.red.shade50
-                                            : Colors.grey.shade100,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        'Stok: ${product.stockQuantity}',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: product.stockQuantity < 5
-                                              ? Colors.red.shade700
-                                              : Colors.grey.shade700,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Gambar Produk
+                                  Expanded(
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        fullImageUrl != null
+                                            ? Image.network(
+                                                fullImageUrl,
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (context, error, stackTrace) {
+                                                  return Container(
+                                                    color: Colors.grey.shade200,
+                                                    child: const Icon(
+                                                      Icons.image_not_supported,
+                                                      color: Colors.grey,
+                                                      size: 32,
+                                                    ),
+                                                  );
+                                                },
+                                                loadingBuilder: (context, child,
+                                                    loadingProgress) {
+                                                  if (loadingProgress == null) {
+                                                    return child;
+                                                  }
+                                                  return Container(
+                                                    color: Colors.grey.shade100,
+                                                    child: const Center(
+                                                      child: SizedBox(
+                                                        width: 20,
+                                                        height: 20,
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              )
+                                            : Container(
+                                                color: Colors.indigo.shade50,
+                                                child: Icon(
+                                                  Icons.shopping_bag_outlined,
+                                                  color: Colors.indigo.shade300,
+                                                  size: 36,
+                                                ),
+                                              ),
+
+                                        // Badge Stok (Bebas Deprecation Warning)
+                                        Positioned(
+                                          top: 6,
+                                          left: 6,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: product.stockQuantity < 5
+                                                  ? Colors.red.withAlpha(230)
+                                                  : Colors.black.withAlpha(153),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'Stok: ${product.stockQuantity}',
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                    const Spacer(),
-                                    Text(
-                                      product.productName,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                                  ),
+
+                                  // Detail Nama & Harga
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          product.productName,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Rp ${product.sellPrice.toStringAsFixed(0)}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.indigo,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Rp ${product.sellPrice.toStringAsFixed(0)}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.indigo,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           );
