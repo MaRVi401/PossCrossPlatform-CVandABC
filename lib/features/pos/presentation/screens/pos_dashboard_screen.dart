@@ -7,6 +7,7 @@ import '../../../katalog/presentation/screens/abc_bundle_screen.dart';
 import '../../../katalog/presentation/screens/category_screen.dart';
 import '../../../katalog/presentation/screens/product_screen.dart';
 import '../../../katalog/presentation/screens/stock_adjustment_screen.dart';
+import '../../../reports/presentation/screens/sales_report_screen.dart';
 import 'pos_screen.dart';
 
 class PosDashboardScreen extends StatelessWidget {
@@ -189,7 +190,7 @@ class PosDashboardScreen extends StatelessWidget {
                         const SizedBox(height: 20),
                         const Divider(color: Colors.white12, height: 1),
                         const SizedBox(height: 16),
-                        
+
                         // Mini KPI Metrics Summary
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -426,6 +427,25 @@ class PosDashboardScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const ABCBundleScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildModernMenuCard(
+                  context,
+                  title: 'Laporan Penjualan',
+                  subtitle: 'Export PDF & Excel',
+                  icon: Icons.analytics_rounded,
+                  gradientColors: [
+                    const Color(0xFF059669),
+                    const Color(0xFF10B981),
+                  ],
+                  badgeText: 'REPORT',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SalesReportScreen(),
                       ),
                     );
                   },

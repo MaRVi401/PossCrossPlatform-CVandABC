@@ -8,6 +8,7 @@ import '../../features/katalog/presentation/screens/category_screen.dart';
 import '../../features/katalog/presentation/screens/product_screen.dart';
 import '../../features/katalog/presentation/screens/stock_adjustment_screen.dart';
 import '../../features/pos/presentation/screens/pos_screen.dart';
+import '../../features/reports/presentation/screens/sales_report_screen.dart';
 
 class MainDrawer extends StatelessWidget {
   final String currentRoute;
@@ -164,7 +165,6 @@ class MainDrawer extends StatelessWidget {
                     }
                   },
                 ),
-
                 const SizedBox(height: 12),
                 _buildSectionHeader('OPERASIONAL KASIR & STOK'),
                 _buildDrawerItem(
@@ -241,7 +241,6 @@ class MainDrawer extends StatelessWidget {
                     }
                   },
                 ),
-
                 const SizedBox(height: 12),
                 _buildSectionHeader('INTELLIGENT ANALYTICS'),
                 _buildDrawerItem(
@@ -280,6 +279,24 @@ class MainDrawer extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (_) => const ABCBundleScreen(),
                         ),
+                      );
+                    }
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.analytics_outlined,
+                  activeIcon: Icons.analytics_rounded,
+                  title: 'Laporan Penjualan',
+                  isSelected: currentRoute == 'sales_report',
+                  activeColor: const Color(0xFF10B981),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (currentRoute != 'sales_report') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SalesReportScreen()),
                       );
                     }
                   },
@@ -379,7 +396,8 @@ class MainDrawer extends StatelessWidget {
                     title,
                     style: TextStyle(
                       fontSize: 13.5,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.w500,
                       color: isSelected ? activeColor : Colors.grey.shade800,
                     ),
                   ),
@@ -424,7 +442,8 @@ class MainDrawer extends StatelessWidget {
             Text('Konfirmasi Logout'),
           ],
         ),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun kasir ini?'),
+        content:
+            const Text('Apakah Anda yakin ingin keluar dari akun kasir ini?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
