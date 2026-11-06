@@ -1,218 +1,457 @@
 import 'package:flutter/material.dart';
+import '../../analytics/presentation/screens/cctv_analytics_screen.dart';
+import '../../app/di/injection.dart';
+import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/stores/auth_store.dart';
+import '../../features/katalog/presentation/screens/abc_bundle_screen.dart';
+import '../../features/katalog/presentation/screens/category_screen.dart';
+import '../../features/katalog/presentation/screens/product_screen.dart';
+import '../../features/katalog/presentation/screens/stock_adjustment_screen.dart';
+import '../../features/pos/presentation/screens/pos_screen.dart';
 
 class MainDrawer extends StatelessWidget {
   final String currentRoute;
 
-  const MainDrawer({super.key, required this.currentRoute});
+  const MainDrawer({
+    super.key,
+    this.currentRoute = 'dashboard',
+  });
 
   @override
   Widget build(BuildContext context) {
+    final authStore = sl<AuthStore>();
+    final user = authStore.currentUser;
+
+    const emeraldColor = Color(0xFF10B981);
+    const emeraldAccentColor = Color(0xFF34D399);
+
     return Drawer(
-      backgroundColor: const Color(0xFF0F172A), // slate-900 (sesuai tema web)
-      child: SafeArea(
-        child: Column(
-          children: [
-            // 1. Header Brand Logo POS ECOSYSTEM
-            Container(
-              height: 64,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Color(0xFF1E293B))), // slate-800
+      backgroundColor: Colors.white,
+      child: Column(
+        children: [
+          // 1. Drawer Header Profil Premium
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.fromLTRB(
+              20,
+              MediaQuery.of(context).padding.top + 20,
+              20,
+              20,
+            ),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child: const Text(
-                'POS ECOSYSTEM',
-                style: TextStyle(
-                  color: Color(0xFF818CF8), // indigo-400
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(2.5),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.amber.shade400,
+                          width: 2,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 26,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          (user?.name.isNotEmpty == true)
+                              ? user!.name[0].toUpperCase()
+                              : 'A',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E1B4B),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user?.name ?? 'Admin POS',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            user?.email ?? 'admin@pos.com',
+                            style: TextStyle(
+                              color: Colors.indigo.shade200,
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ),
-
-            // 2. Daftar Menu Navigasi
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                children: [
-                  // Dashboard
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.dashboard_rounded,
-                    title: 'Dashboard',
-                    route: '/dashboard',
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
                   ),
-
-                  // Section: Katalog & Stok
-                  _buildSectionHeader('KATALOG & STOK'),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.category_outlined,
-                    title: 'Kategori Produk',
-                    route: '/categories',
-                  ),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.inventory_2_outlined,
-                    title: 'Data Produk',
-                    route: '/products',
-                  ),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.tune_rounded,
-                    title: 'Penyesuaian Stok',
-                    route: '/stock-adjustments',
-                  ),
-
-                  // Section: Transaksi & POS
-                  _buildSectionHeader('TRANSAKSI & POS'),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.point_of_sale_rounded,
-                    title: 'Kasir (POS)',
-                    route: '/pos',
-                  ),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.assessment_outlined,
-                    title: 'Laporan Penjualan',
-                    route: '/reports',
-                  ),
-
-                  // Section: Smart Optimasi
-                  _buildSectionHeader('SMART OPTIMASI'),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.auto_awesome_rounded,
-                    title: 'Smart Bundling (ABC)',
-                    route: '/abc',
-                    badgeText: 'AI',
-                  ),
-
-                  // Section: Manajemen Pengguna
-                  _buildSectionHeader('MANAJEMEN PENGGUNA'),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.people_outline_rounded,
-                    title: 'Data Pelanggan',
-                    route: '/customers',
-                  ),
-                ],
-              ),
-            ),
-
-            // 3. Footer Profile Info & Logout
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xFF1E293B))),
-              ),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    backgroundColor: Color(0xFF4F46E5), // indigo-600
-                    radius: 18,
-                    child: Text('AY', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Ahmad Yassin',
-                          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          'Admin Store',
-                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  decoration: BoxDecoration(
+                    color: emeraldColor.withAlpha(40),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: emeraldAccentColor.withAlpha(100),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
-                    onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/login');
-                    },
-                    tooltip: 'Keluar / Logout',
-                  )
-                ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: emeraldAccentColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Role: ${user?.roleName ?? 'Administrator'}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 2. Daftar Menu Navigasi (Grouped Sections)
+          Expanded(
+            child: ListView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              children: [
+                _buildSectionHeader('UTAMA'),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.dashboard_outlined,
+                  activeIcon: Icons.dashboard_rounded,
+                  title: 'Dashboard Utama',
+                  isSelected: currentRoute == 'dashboard',
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (currentRoute != 'dashboard') {
+                      Navigator.popUntil(context, (route) => route.isFirst);
+                    }
+                  },
+                ),
+
+                const SizedBox(height: 12),
+                _buildSectionHeader('OPERASIONAL KASIR & STOK'),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.point_of_sale_outlined,
+                  activeIcon: Icons.point_of_sale_rounded,
+                  title: 'Kasir Penjualan (POS)',
+                  isSelected: currentRoute == 'pos',
+                  activeColor: const Color(0xFFEA580C),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (currentRoute != 'pos') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const PosScreen()),
+                      );
+                    }
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.inventory_2_outlined,
+                  activeIcon: Icons.inventory_2_rounded,
+                  title: 'Manajemen Produk',
+                  isSelected: currentRoute == 'product',
+                  activeColor: const Color(0xFF4338CA),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (currentRoute != 'product') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ProductScreen(),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.category_outlined,
+                  activeIcon: Icons.category_rounded,
+                  title: 'Kategori Barang',
+                  isSelected: currentRoute == 'category',
+                  activeColor: const Color(0xFF0D9488),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (currentRoute != 'category') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CategoryScreen(),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.tune_outlined,
+                  activeIcon: Icons.tune_rounded,
+                  title: 'Penyesuaian Stok',
+                  isSelected: currentRoute == 'stock_adjustment',
+                  activeColor: const Color(0xFF7E22CE),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (currentRoute != 'stock_adjustment') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const StockAdjustmentScreen(),
+                        ),
+                      );
+                    }
+                  },
+                ),
+
+                const SizedBox(height: 12),
+                _buildSectionHeader('INTELLIGENT ANALYTICS'),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.videocam_outlined,
+                  activeIcon: Icons.videocam_rounded,
+                  title: 'CCTV Analytics (YOLOv8)',
+                  isSelected: currentRoute == 'cctv',
+                  activeColor: const Color(0xFF0284C7),
+                  badgeText: 'CV',
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (currentRoute != 'cctv') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CCTVAnalyticsScreen(),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.auto_awesome_outlined,
+                  activeIcon: Icons.auto_awesome_rounded,
+                  title: 'Bundle Promo (ABC)',
+                  isSelected: currentRoute == 'abc',
+                  activeColor: const Color(0xFFB45309),
+                  badgeText: 'AI',
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (currentRoute != 'abc') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ABCBundleScreen(),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // 3. Footer Tombol Keluar (Logout)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              border: Border(top: BorderSide(color: Colors.grey.shade200)),
+            ),
+            child: Material(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                onTap: () => _confirmLogout(context, authStore),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout_rounded, color: Colors.red.shade700),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Keluar Sesi (Logout)',
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
+  /// Label Judul Sub-Seksi Menu
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 12, top: 16, bottom: 6),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
       child: Text(
         title,
-        style: const TextStyle(
-          color: Color(0xFF64748B), // slate-500
+        style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.bold,
-          letterSpacing: 1.1,
+          color: Colors.grey.shade400,
+          letterSpacing: 0.8,
         ),
       ),
     );
   }
 
-  Widget _buildMenuItem(
+  /// Item Menu Navigasi Modern
+  Widget _buildDrawerItem(
     BuildContext context, {
     required IconData icon,
+    required IconData activeIcon,
     required String title,
-    required String route,
+    required bool isSelected,
+    Color activeColor = const Color(0xFF312E81),
     String? badgeText,
+    required VoidCallback onTap,
   }) {
-    final isSelected = currentRoute == route;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 2),
-      decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFF4F46E5) : Colors.transparent, // indigo-600 active
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ListTile(
-        dense: true,
-        horizontalTitleGap: 8,
-        leading: Icon(
-          icon,
-          color: isSelected ? Colors.white : const Color(0xFF94A3B8),
-          size: 20,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Material(
+        color: isSelected ? activeColor.withAlpha(20) : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(
+                  isSelected ? activeIcon : icon,
+                  color: isSelected ? activeColor : Colors.grey.shade600,
+                  size: 22,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? activeColor : Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+                if (badgeText != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: activeColor.withAlpha(20),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      badgeText,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: activeColor,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
-        trailing: badgeText != null
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1), // indigo-500
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  badgeText,
-                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                ),
-              )
-            : null,
-        onTap: () {
-          Navigator.pop(context); // Tutup drawer
-          if (!isSelected) {
-            Navigator.pushReplacementNamed(context, route);
-          }
-        },
+      ),
+    );
+  }
+
+  /// Dialog Konfirmasi Logout
+  void _confirmLogout(BuildContext context, AuthStore authStore) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+            SizedBox(width: 8),
+            Text('Konfirmasi Logout'),
+          ],
+        ),
+        content: const Text('Apakah Anda yakin ingin keluar dari akun kasir ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await authStore.logout();
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            },
+            child: const Text('Ya, Keluar'),
+          ),
+        ],
       ),
     );
   }

@@ -236,7 +236,7 @@ class _ProductScreenState extends State<ProductScreen> {
 
                       // Dropdown Kategori
                       DropdownButtonFormField<int>(
-                        value: selectedCategoryId,
+                        initialValue: selectedCategoryId,
                         decoration: InputDecoration(
                           labelText: 'Kategori Produk',
                           prefixIcon: const Icon(Icons.category_outlined),
