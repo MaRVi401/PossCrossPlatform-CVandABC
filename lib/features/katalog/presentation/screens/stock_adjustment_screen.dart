@@ -1,6 +1,9 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+
 import '../../../../app/di/injection.dart';
+import '../../../../shared/widgets/main_drawer.dart';
 import '../stores/stock_adjustment_store.dart';
 import '../stores/product_store.dart';
 
@@ -8,181 +11,66 @@ class StockAdjustmentScreen extends StatefulWidget {
   const StockAdjustmentScreen({super.key});
 
   @override
-  State<StockAdjustmentScreen> createState() => _StockAdjustmentScreenState();
+  State<StockAdjustmentScreen> createState() =>
+      _StockAdjustmentScreenState();
 }
 
-class _StockAdjustmentScreenState extends State<StockAdjustmentScreen> {
+class _StockAdjustmentScreenState
+    extends State<StockAdjustmentScreen> {
   final _adjustmentStore = sl<StockAdjustmentStore>();
   final _productStore = sl<ProductStore>();
+
+  static const Color primaryColor = Color(0xFF1E1B4B);
+  static const Color backgroundColor = Color(0xFFF8FAFC);
 
   @override
   void initState() {
     super.initState();
-    _adjustmentStore.fetchAdjustments();
-    _productStore.fetchProducts(); // Untuk pilihan produk di form
+    _refreshData();
+  }
+
+  Future<void> _refreshData() async {
+    await Future.wait([
+      _adjustmentStore.fetchAdjustments(),
+      _productStore.fetchProducts(),
+    ]);
   }
 
   void _showAddAdjustmentModal() {
-    int? selectedProductId = _productStore.products.isNotEmpty ? _productStore.products.first.productId : null;
-    String selectedType = 'IN';
-    final qtyController = TextEditingController();
-    final reasonController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
+    final uniqueProducts = <int, dynamic>{};
+
+    for (final product in _productStore.products) {
+      uniqueProducts[product.productId] = product;
+    }
+
+    final productList = uniqueProducts.values.toList();
+
+    if (productList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Data produk belum tersedia.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
       ),
-      builder: (modalContext) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                top: 24,
-                left: 24,
-                right: 24,
-                bottom: MediaQuery.of(modalContext).viewInsets.bottom + 24,
-              ),
-              child: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.tune_rounded, color: Colors.indigo),
-                          SizedBox(width: 8),
-                          Text(
-                            'Penyesuaian Stok Baru',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Dropdown Pilih Produk
-                      DropdownButtonFormField<int>(
-                        initialValue: selectedProductId,
-                        decoration: InputDecoration(
-                          labelText: 'Pilih Produk',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        items: _productStore.products.map((p) {
-                          return DropdownMenuItem<int>(
-                            value: p.productId,
-                            child: Text('${p.productName} (Stok: ${p.stockQuantity})'),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setModalState(() {
-                            selectedProductId = val;
-                          });
-                        },
-                        validator: (val) => val == null ? 'Pilih produk terlebih dahulu' : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Dropdown Tipe Penyesuaian
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedType,
-                        decoration: InputDecoration(
-                          labelText: 'Tipe Penyesuaian',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'IN', child: Text('IN (Stok Masuk / Penambahan)')),
-                          DropdownMenuItem(value: 'OUT', child: Text('OUT (Stok Keluar / Pengurangan)')),
-                          DropdownMenuItem(value: 'CORRECTION', child: Text('CORRECTION (Koreksi / Opname Stok)')),
-                        ],
-                        onChanged: (val) {
-                          setModalState(() {
-                            selectedType = val!;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Jumlah Kuantitas
-                      TextFormField(
-                        controller: qtyController,
-                        keyboardType: TextInputType.number,
-                        validator: (v) {
-                          if (v == null || int.tryParse(v) == null || int.parse(v) <= 0) {
-                            return 'Masukkan jumlah angka yang valid (> 0)';
-                          }
-                          return null;
-                        },
-                        decoration: InputDecoration(
-                          labelText: 'Jumlah Kuantitas',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Alasan Penyesuaian
-                      TextFormField(
-                        controller: reasonController,
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Alasan wajib diisi' : null,
-                        decoration: InputDecoration(
-                          labelText: 'Alasan / Keterangan',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Tombol Simpan
-                      Observer(
-                        builder: (_) {
-                          return SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.indigo,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              onPressed: _adjustmentStore.isLoading
-                                  ? null
-                                  : () async {
-                                      if (!formKey.currentState!.validate()) return;
-
-                                      final success = await _adjustmentStore.createAdjustment(
-                                        productId: selectedProductId!,
-                                        adjustmentType: selectedType,
-                                        quantity: int.parse(qtyController.text.trim()),
-                                        reason: reasonController.text.trim(),
-                                      );
-
-                                      if (!modalContext.mounted) return;
-
-                                      if (success) {
-                                        Navigator.pop(modalContext);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Penyesuaian stok berhasil disimpan!'), backgroundColor: Colors.green),
-                                        );
-                                      } else if (_adjustmentStore.errorMessage != null) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text(_adjustmentStore.errorMessage!), backgroundColor: Colors.red[700]),
-                                        );
-                                      }
-                                    },
-                              child: _adjustmentStore.isLoading
-                                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                  : const Text('Simpan Penyesuaian'),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
+      builder: (_) {
+        return _AddAdjustmentSheet(
+          products: productList,
+          adjustmentStore: _adjustmentStore,
+          pageContext: context,
+          onSuccess: _refreshData,
         );
       },
     );
@@ -191,91 +79,204 @@ class _StockAdjustmentScreenState extends State<StockAdjustmentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: backgroundColor,
+
       appBar: AppBar(
-        title: const Text('Riwayat Penyesuaian Stok'),
-        backgroundColor: Colors.indigo,
+        title: const Text(
+          'Riwayat Penyesuaian Stok',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh Data',
+            onPressed: _refreshData,
+          ),
+        ],
       ),
+
+      drawer: const MainDrawer(
+        currentRoute: 'stock_adjustment',
+      ),
+
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddAdjustmentModal,
-        backgroundColor: Colors.indigo,
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Atur Stok'),
       ),
+
       body: Observer(
         builder: (_) {
-          if (_adjustmentStore.isLoading && _adjustmentStore.adjustments.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+          if (_adjustmentStore.isLoading &&
+              _adjustmentStore.adjustments.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: primaryColor,
+              ),
+            );
           }
 
           if (_adjustmentStore.adjustments.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+            return RefreshIndicator(
+              onRefresh: _refreshData,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  Icon(Icons.history_toggle_off, size: 64, color: Colors.grey.shade400),
-                  const SizedBox(height: 12),
-                  const Text('Belum ada riwayat penyesuaian stok', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  SizedBox(
+                    height:
+                        MediaQuery.of(context).size.height * 0.55,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.history_toggle_off,
+                          size: 64,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 12),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'Belum ada riwayat penyesuaian stok',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             );
           }
 
           return RefreshIndicator(
-            onRefresh: () => _adjustmentStore.fetchAdjustments(),
+            onRefresh: _refreshData,
             child: ListView.separated(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
               itemCount: _adjustmentStore.adjustments.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final item = _adjustmentStore.adjustments[index];
+
                 Color badgeColor = Colors.blue;
-                if (item.adjustmentType == 'IN') badgeColor = Colors.green;
-                if (item.adjustmentType == 'OUT') badgeColor = Colors.orange;
-                if (item.adjustmentType == 'CORRECTION') badgeColor = Colors.purple;
+
+                if (item.adjustmentType == 'IN') {
+                  badgeColor = Colors.green;
+                } else if (item.adjustmentType == 'OUT') {
+                  badgeColor = Colors.orange;
+                } else if (item.adjustmentType == 'CORRECTION') {
+                  badgeColor = Colors.purple;
+                }
 
                 return Card(
+                  color: Colors.white,
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   child: Padding(
-                    padding: const EdgeInsets.all(14.0),
+                    padding: const EdgeInsets.all(14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Nama Produk dan Badge
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              item.productName ?? 'Produk #${item.productId}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            Expanded(
+                              child: Text(
+                                item.productName ??
+                                    'Produk #${item.productId}',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 5,
+                              ),
                               decoration: BoxDecoration(
                                 color: badgeColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+                                border: Border.all(
+                                  color: badgeColor.withValues(alpha: 0.3),
+                                ),
                               ),
                               child: Text(
                                 item.adjustmentType,
-                                style: TextStyle(color: badgeColor, fontWeight: FontWeight.bold, fontSize: 11),
+                                style: TextStyle(
+                                  color: badgeColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text('SKU: ${item.productSku ?? '-'}', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                        const Divider(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+                        const SizedBox(height: 5),
+
+                        // SKU
+                        Text(
+                          'SKU: ${item.productSku ?? '-'}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
+                        ),
+
+                        const Divider(height: 18),
+
+                        // Jumlah dan Pengguna
+                        Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          runSpacing: 6,
                           children: [
-                            Text('Jumlah: ${item.quantityChanged} Unit', style: const TextStyle(fontWeight: FontWeight.w500)),
-                            Text('Oleh: ${item.userName ?? 'Admin'}', style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+                            Text(
+                              'Jumlah: ${item.quantityChanged} Unit',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              'Oleh: ${item.userName ?? 'Admin'}',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text('Alasan: ${item.reason}', style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
+
+                        const SizedBox(height: 8),
+
+                        // Alasan
+                        Text(
+                          'Alasan: ${item.reason}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -284,6 +285,360 @@ class _StockAdjustmentScreenState extends State<StockAdjustmentScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ======================================================
+// FORM MODAL PENYESUAIAN STOK
+// ======================================================
+
+class _AddAdjustmentSheet extends StatefulWidget {
+  final List<dynamic> products;
+  final StockAdjustmentStore adjustmentStore;
+  final BuildContext pageContext;
+  final Future<void> Function() onSuccess;
+
+  const _AddAdjustmentSheet({
+    required this.products,
+    required this.adjustmentStore,
+    required this.pageContext,
+    required this.onSuccess,
+  });
+
+  @override
+  State<_AddAdjustmentSheet> createState() =>
+      _AddAdjustmentSheetState();
+}
+
+class _AddAdjustmentSheetState
+    extends State<_AddAdjustmentSheet> {
+  static const Color primaryColor = Color(0xFF1E1B4B);
+
+  final _formKey = GlobalKey<FormState>();
+  final _qtyController = TextEditingController();
+  final _reasonController = TextEditingController();
+
+  late int selectedProductId;
+  String selectedType = 'IN';
+
+  bool isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    selectedProductId = widget.products.first.productId;
+  }
+
+  @override
+  void dispose() {
+    _qtyController.dispose();
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveAdjustment() async {
+    if (isSaving) return;
+
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      isSaving = true;
+    });
+
+    try {
+      final success =
+          await widget.adjustmentStore.createAdjustment(
+        productId: selectedProductId,
+        adjustmentType: selectedType,
+        quantity: int.parse(_qtyController.text.trim()),
+        reason: _reasonController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        Navigator.of(context).pop();
+
+        if (widget.pageContext.mounted) {
+          widget.onSuccess();
+
+          ScaffoldMessenger.of(widget.pageContext).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Penyesuaian stok berhasil disimpan!',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        setState(() {
+          isSaving = false;
+        });
+
+        final error =
+            widget.adjustmentStore.errorMessage ??
+                'Gagal menyimpan penyesuaian stok.';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isSaving = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        top: 24,
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.tune_rounded,
+                      color: primaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Penyesuaian Stok Baru',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Dropdown Produk
+              DropdownButtonFormField<int>(
+                initialValue: selectedProductId,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: 'Pilih Produk',
+                  prefixIcon: const Icon(
+                    Icons.inventory_2_outlined,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                items: widget.products.map((product) {
+                  return DropdownMenuItem<int>(
+                    value: product.productId,
+                    child: Text(
+                      '${product.productName} (Stok: ${product.stockQuantity})',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                onChanged: isSaving
+                    ? null
+                    : (value) {
+                        if (value == null) return;
+
+                        setState(() {
+                          selectedProductId = value;
+                        });
+                      },
+                validator: (value) {
+                  if (value == null) {
+                    return 'Pilih produk terlebih dahulu';
+                  }
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Dropdown Tipe
+              DropdownButtonFormField<String>(
+                initialValue: selectedType,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: 'Tipe Penyesuaian',
+                  prefixIcon: const Icon(
+                    Icons.swap_vert_rounded,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'IN',
+                    child: Text(
+                      'IN - Stok Masuk / Penambahan',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'OUT',
+                    child: Text(
+                      'OUT - Stok Keluar / Pengurangan',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'CORRECTION',
+                    child: Text(
+                      'CORRECTION - Koreksi Stok',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+                onChanged: isSaving
+                    ? null
+                    : (value) {
+                        if (value == null) return;
+
+                        setState(() {
+                          selectedType = value;
+                        });
+                      },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Kuantitas
+              TextFormField(
+                controller: _qtyController,
+                enabled: !isSaving,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Jumlah Kuantitas',
+                  prefixIcon: const Icon(
+                    Icons.numbers_rounded,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) {
+                  final quantity = int.tryParse(
+                    value?.trim() ?? '',
+                  );
+
+                  if (quantity == null || quantity <= 0) {
+                    return 'Masukkan jumlah yang valid (> 0)';
+                  }
+
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Alasan
+              TextFormField(
+                controller: _reasonController,
+                enabled: !isSaving,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Alasan / Keterangan',
+                  prefixIcon: const Icon(
+                    Icons.description_outlined,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Alasan wajib diisi';
+                  }
+
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 24),
+
+              // Tombol Simpan
+              SizedBox(
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor:
+                        primaryColor.withValues(alpha: 0.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: isSaving ? null : _saveAdjustment,
+                  child: isSaving
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Simpan Penyesuaian',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -241,6 +241,24 @@ class MainDrawer extends StatelessWidget {
                     }
                   },
                 ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.analytics_outlined,
+                  activeIcon: Icons.analytics_rounded,
+                  title: 'Laporan Penjualan',
+                  isSelected: currentRoute == 'sales_report',
+                  activeColor: const Color(0xFF10B981),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (currentRoute != 'sales_report') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SalesReportScreen()),
+                      );
+                    }
+                  },
+                ),
                 const SizedBox(height: 12),
                 _buildSectionHeader('INTELLIGENT ANALYTICS'),
                 _buildDrawerItem(
@@ -279,24 +297,6 @@ class MainDrawer extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (_) => const ABCBundleScreen(),
                         ),
-                      );
-                    }
-                  },
-                ),
-                _buildDrawerItem(
-                  context,
-                  icon: Icons.analytics_outlined,
-                  activeIcon: Icons.analytics_rounded,
-                  title: 'Laporan Penjualan',
-                  isSelected: currentRoute == 'sales_report',
-                  activeColor: const Color(0xFF10B981),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (currentRoute != 'sales_report') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const SalesReportScreen()),
                       );
                     }
                   },

@@ -1,18 +1,26 @@
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+
+import '../../../../shared/widgets/main_drawer.dart';
 
 class CCTVAnalyticsScreen extends StatefulWidget {
   const CCTVAnalyticsScreen({super.key});
 
   @override
-  State<CCTVAnalyticsScreen> createState() => _CCTVAnalyticsScreenState();
+  State<CCTVAnalyticsScreen> createState() =>
+      _CCTVAnalyticsScreenState();
 }
 
 class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
-  final Dio _dio = Dio(BaseOptions(baseUrl: 'http://10.0.2.2:5000'));
+  final Dio _dio = Dio(
+    BaseOptions(baseUrl: 'http://10.0.2.2:5000'),
+  );
+
   Timer? _statsTimer;
 
   int _visitorCount = 0;
@@ -22,52 +30,94 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
   @override
   void initState() {
     super.initState();
+
     _fetchYoloStats();
-    // Polling data statistik dari Flask /api/stats setiap 1 detik
-    _statsTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _fetchYoloStats();
-    });
+
+    // Polling statistik setiap 1 detik.
+    _statsTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _fetchYoloStats(),
+    );
   }
 
   Future<void> _fetchYoloStats() async {
     try {
       final response = await _dio.get(
         '/api/stats',
-        options: Options(headers: {'ngrok-skip-browser-warning': 'true'}),
+        options: Options(
+          headers: {
+            'ngrok-skip-browser-warning': 'true',
+          },
+        ),
       );
 
       if (response.statusCode == 200 && mounted) {
         final data = response.data;
+
         setState(() {
-          _visitorCount = data['detected_count'] ?? data['total_detected'] ?? 0;
-          _avgHeight = (data['avg_height_cm'] as num?)?.toDouble() ?? 0.0;
+          _visitorCount =
+              data['detected_count'] ??
+              data['total_detected'] ??
+              0;
+
+          _avgHeight =
+              (data['avg_height_cm'] as num?)?.toDouble() ?? 0.0;
+
           _isStatsLoading = false;
         });
       }
     } catch (e) {
-      // Abaikan error koneksi sementara saat polling
+      // Abaikan error koneksi sementara saat polling.
     }
   }
 
   @override
   void dispose() {
     _statsTimer?.cancel();
+    _dio.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+
+      // HEADER MENGIKUTI SALES REPORT SCREEN
       appBar: AppBar(
-        title: const Text('Real-time CCTV & Visitor Analytics'),
-        elevation: 1,
+        title: const Text(
+          'CCTV Analytics',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: const Color(0xFF1E1B4B),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh Data',
+            onPressed: () {
+              _fetchYoloStats();
+            },
+          ),
+        ],
       ),
+
+      // DRAWER
+      drawer: const MainDrawer(
+        currentRoute: 'cctv_analytics',
+      ),
+
+      // BODY
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Tampilan CCTV Stream dengan Format Landscape (16:9)
+
+            // 1. CCTV STREAM
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(
@@ -76,16 +126,56 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
               clipBehavior: Clip.antiAlias,
               color: Colors.black,
               child: const AspectRatio(
-                aspectRatio: 16 / 9, // Format landscape standar CCTV
+                aspectRatio: 16 / 9,
                 child: MjpegStreamPlayer(
-                  streamUrl: 'http://10.0.2.2:5000/video_feed',
+                  streamUrl:
+                      'http://10.0.2.2:5000/video_feed',
                 ),
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // 2. Card Statistik Real-time dari YOLOv8
+            // 2. JUDUL STATISTIK
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Statistik Pengunjung',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Live',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // 3. REAL-TIME YOLOv8 STATISTICS
             Row(
               children: [
                 Expanded(
@@ -98,7 +188,9 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
                     isLoading: _isStatsLoading,
                   ),
                 ),
+
                 const SizedBox(width: 12),
+
                 Expanded(
                   child: _buildMetricCard(
                     title: 'Rata-Rata Tinggi',
@@ -126,11 +218,13 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
     required bool isLoading,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,7 +237,9 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
               fontSize: 12,
             ),
           ),
+
           const SizedBox(height: 8),
+
           isLoading
               ? SizedBox(
                   height: 28,
@@ -182,18 +278,27 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
   }
 }
 
-/// Custom Stream Player menggunakan HttpClient Native
+
+// CUSTOM MJPEG STREAM PLAYER
+
 class MjpegStreamPlayer extends StatefulWidget {
   final String streamUrl;
-  const MjpegStreamPlayer({super.key, required this.streamUrl});
+
+  const MjpegStreamPlayer({
+    super.key,
+    required this.streamUrl,
+  });
 
   @override
-  State<MjpegStreamPlayer> createState() => _MjpegStreamPlayerState();
+  State<MjpegStreamPlayer> createState() =>
+      _MjpegStreamPlayerState();
 }
 
 class _MjpegStreamPlayerState extends State<MjpegStreamPlayer> {
   Uint8List? _currentFrame;
+
   bool _hasError = false;
+
   StreamSubscription? _subscription;
   HttpClient? _client;
 
@@ -205,13 +310,22 @@ class _MjpegStreamPlayerState extends State<MjpegStreamPlayer> {
 
   void _connectStream() async {
     if (!mounted) return;
+
     setState(() => _hasError = false);
 
     try {
       _client = HttpClient();
-      _client!.connectionTimeout = const Duration(seconds: 5);
-      final request = await _client!.getUrl(Uri.parse(widget.streamUrl));
-      request.headers.add('ngrok-skip-browser-warning', 'true');
+      _client!.connectionTimeout =
+          const Duration(seconds: 5);
+
+      final request = await _client!.getUrl(
+        Uri.parse(widget.streamUrl),
+      );
+
+      request.headers.add(
+        'ngrok-skip-browser-warning',
+        'true',
+      );
 
       final response = await request.close();
 
@@ -225,40 +339,66 @@ class _MjpegStreamPlayerState extends State<MjpegStreamPlayer> {
             int start = -1;
             int end = -1;
 
-            for (int i = 0; i < bytesBuffer.length - 1; i++) {
-              if (bytesBuffer[i] == 0xFF && bytesBuffer[i + 1] == 0xD8) {
+            for (
+              int i = 0;
+              i < bytesBuffer.length - 1;
+              i++
+            ) {
+              if (
+                bytesBuffer[i] == 0xFF &&
+                bytesBuffer[i + 1] == 0xD8
+              ) {
                 start = i;
               }
-              if (bytesBuffer[i] == 0xFF && bytesBuffer[i + 1] == 0xD9) {
+
+              if (
+                bytesBuffer[i] == 0xFF &&
+                bytesBuffer[i + 1] == 0xD9
+              ) {
                 end = i + 2;
+
                 if (start != -1 && end > start) {
-                  final frameBytes =
-                      Uint8List.fromList(bytesBuffer.sublist(start, end));
+                  final frameBytes = Uint8List.fromList(
+                    bytesBuffer.sublist(start, end),
+                  );
+
                   if (mounted) {
                     setState(() {
                       _currentFrame = frameBytes;
                       _hasError = false;
                     });
                   }
+
                   bytesBuffer = bytesBuffer.sublist(end);
                   break;
                 }
               }
             }
           },
+
           onError: (error) {
-            if (mounted) setState(() => _hasError = true);
+            if (mounted) {
+              setState(() => _hasError = true);
+            }
           },
+
           onDone: () {
-            if (mounted) setState(() => _hasError = true);
+            if (mounted) {
+              setState(() => _hasError = true);
+            }
           },
+
           cancelOnError: true,
         );
       } else {
-        if (mounted) setState(() => _hasError = true);
+        if (mounted) {
+          setState(() => _hasError = true);
+        }
       }
     } catch (e) {
-      if (mounted) setState(() => _hasError = true);
+      if (mounted) {
+        setState(() => _hasError = true);
+      }
     }
   }
 
@@ -276,22 +416,39 @@ class _MjpegStreamPlayerState extends State<MjpegStreamPlayer> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.videocam_off, size: 48, color: Colors.redAccent),
+            const Icon(
+              Icons.videocam_off,
+              size: 48,
+              color: Colors.redAccent,
+            ),
+
             const SizedBox(height: 8),
+
             const Text(
               'Gagal Terhubung ke Stream',
-              style: TextStyle(color: Colors.white, fontSize: 12),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+              ),
             ),
+
             const SizedBox(height: 8),
+
             ElevatedButton.icon(
               onPressed: () {
                 _subscription?.cancel();
                 _client?.close();
                 _connectStream();
               },
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('Coba Lagi', style: TextStyle(fontSize: 12)),
-            )
+              icon: const Icon(
+                Icons.refresh,
+                size: 16,
+              ),
+              label: const Text(
+                'Coba Lagi',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
           ],
         ),
       );
@@ -302,10 +459,19 @@ class _MjpegStreamPlayerState extends State<MjpegStreamPlayer> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: Colors.white),
+            CircularProgressIndicator(
+              color: Colors.white,
+            ),
+
             SizedBox(height: 12),
-            Text('Memuat Stream CCTV...',
-                style: TextStyle(color: Colors.white70, fontSize: 12)),
+
+            Text(
+              'Memuat Stream CCTV...',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+              ),
+            ),
           ],
         ),
       );

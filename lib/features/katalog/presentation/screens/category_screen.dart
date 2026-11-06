@@ -5,6 +5,7 @@ import 'package:flutter_mobx/flutter_mobx.dart';
 import '../../../../app/di/injection.dart';
 import '../stores/category_store.dart';
 import '../../data/models/category_model.dart';
+import '../../../../shared/widgets/main_drawer.dart';
 
 class CategoryScreen extends StatefulWidget {
   const CategoryScreen({super.key});
@@ -233,14 +234,27 @@ class _CategoryScreenState extends State<CategoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Manajemen Kategori'),
-        backgroundColor: Colors.indigo,
+        title: const Text(
+          'Manajemen Kategori',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color(0xFF1E1B4B),
         foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh Data',
+            onPressed: () => _categoryStore.fetchCategories(),
+          ),
+        ],
       ),
+      drawer: const MainDrawer(currentRoute: 'category'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showFormModal(),
-        backgroundColor: Colors.indigo,
+        backgroundColor: const Color(0xFF1E1B4B),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Kategori Baru'),
@@ -262,11 +276,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
                         onPressed: () {
                           _searchController.clear();
                           _categoryStore.setSearchQuery('');
+                          setState(() {});
                         },
                       )
                     : null,
                 filled: true,
-                fillColor: Colors.grey.shade100,
+                fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide.none,
@@ -281,7 +296,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
               builder: (_) {
                 if (_categoryStore.isLoading &&
                     _categoryStore.categories.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
                 }
 
                 if (_categoryStore.filteredCategories.isEmpty) {
@@ -289,13 +306,18 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.category_outlined,
-                            size: 64, color: Colors.grey.shade400),
+                        Icon(
+                          Icons.category_outlined,
+                          size: 64,
+                          color: Colors.grey.shade400,
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           'Kategori tidak ditemukan',
                           style: TextStyle(
-                              color: Colors.grey.shade600, fontSize: 16),
+                            color: Colors.grey.shade600,
+                            fontSize: 16,
+                          ),
                         ),
                       ],
                     ),
@@ -305,34 +327,43 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 return RefreshIndicator(
                   onRefresh: () => _categoryStore.fetchCategories(),
                   child: ListView.separated(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     itemCount: _categoryStore.filteredCategories.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final category = _categoryStore.filteredCategories[index];
+
                       return Card(
                         elevation: 2,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           leading: CircleAvatar(
-                            backgroundColor: Colors.indigo.shade50,
+                            backgroundColor: const Color(0xFFEEF2FF),
                             child: Text(
                               category.categoryName
                                   .substring(0, 1)
                                   .toUpperCase(),
                               style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.indigo),
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E1B4B),
+                              ),
                             ),
                           ),
                           title: Text(
                             category.categoryName,
                             style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,13 +372,16 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                 Text(
                                   category.description!,
                                   style: TextStyle(
-                                      color: Colors.grey.shade700,
-                                      fontSize: 13),
+                                    color: Colors.grey.shade700,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               const SizedBox(height: 4),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.blue.shade50,
                                   borderRadius: BorderRadius.circular(6),
@@ -355,9 +389,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                 child: Text(
                                   '${category.productsCount} Produk',
                                   style: TextStyle(
-                                      color: Colors.blue.shade900,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold),
+                                    color: Colors.blue.shade900,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -366,14 +401,18 @@ class _CategoryScreenState extends State<CategoryScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.edit_outlined,
-                                    color: Colors.indigo),
+                                icon: const Icon(
+                                  Icons.edit_outlined,
+                                  color: Color(0xFF1E1B4B),
+                                ),
                                 onPressed: () =>
                                     _showFormModal(category: category),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline,
-                                    color: Colors.redAccent),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.redAccent,
+                                ),
                                 onPressed: () => _confirmDelete(category),
                               ),
                             ],
