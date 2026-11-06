@@ -25,7 +25,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCategories();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCategories();
+    });
   }
 
   @override
@@ -66,10 +68,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
     try {
       await _categoryStore.fetchCategories();
     } catch (e) {
-      _showMessage(
-        'Gagal memuat kategori: $e',
-        isError: true,
-      );
+      if (mounted) {
+        _showMessage(
+          'Gagal memuat kategori: $e',
+          isError: true,
+        );
+      }
     }
   }
 
@@ -217,9 +221,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                       return;
                                     }
 
-                                    final name =
-                                        nameController.text.trim();
-
+                                    final name = nameController.text.trim();
                                     final description =
                                         descController.text.trim();
 
@@ -250,8 +252,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                       return;
                                     }
 
-                                    if (!mounted ||
-                                        !modalContext.mounted) {
+                                    if (!mounted || !modalContext.mounted) {
                                       return;
                                     }
 
@@ -315,62 +316,51 @@ class _CategoryScreenState extends State<CategoryScreen> {
   // ==========================================================
 
   Future<void> _confirmDelete(CategoryModel category) async {
-    bool isProcessing = false;
-
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.redAccent,
               ),
-              title: const Row(
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.redAccent,
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Hapus Kategori',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
                   ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Hapus Kategori',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              content: Text(
-                'Apakah Anda yakin ingin menghapus kategori '
-                '"${category.categoryName}"?',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isProcessing
-                      ? null
-                      : () {
-                          Navigator.of(dialogContext).pop(false);
-                        },
-                  child: const Text('Batal'),
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: isProcessing
-                      ? null
-                      : () {
-                          Navigator.of(dialogContext).pop(true);
-                        },
-                  child: const Text('Hapus'),
-                ),
-              ],
-            );
-          },
+              ),
+            ],
+          ),
+          content: Text(
+            'Apakah Anda yakin ingin menghapus kategori "${category.categoryName}"?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Hapus'),
+            ),
+          ],
         );
       },
     );
@@ -397,10 +387,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
         );
       }
     } catch (e) {
-      _showMessage(
-        'Gagal menghapus kategori: $e',
-        isError: true,
-      );
+      if (mounted) {
+        _showMessage(
+          'Gagal menghapus kategori: $e',
+          isError: true,
+        );
+      }
     }
   }
 
@@ -410,10 +402,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
   Widget _buildCategoryCard(CategoryModel category) {
     final name = category.categoryName.trim();
-
-    final initial = name.isNotEmpty
-        ? name.substring(0, 1).toUpperCase()
-        : '?';
+    final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
 
     return Card(
       elevation: 2,
@@ -605,11 +594,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
           ),
         ],
       ),
-
       drawer: const MainDrawer(
         currentRoute: 'category',
       ),
-
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           _showFormModal();
@@ -625,54 +612,51 @@ class _CategoryScreenState extends State<CategoryScreen> {
           ),
         ),
       ),
-
-      floatingActionButtonLocation:
-          FloatingActionButtonLocation.endFloat,
-
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                _categoryStore.setSearchQuery(value);
-                setState(() {});
+            child: Observer(
+              builder: (_) {
+                return TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    // Panggil fungsi store MobX tanpa setState()!
+                    _categoryStore.setSearchQuery(value);
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Cari kategori...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _categoryStore.searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              _categoryStore.setSearchQuery('');
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                );
               },
-              decoration: InputDecoration(
-                hintText: 'Cari kategori...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _categoryStore.setSearchQuery('');
-                          setState(() {});
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-              ),
             ),
           ),
-
           Expanded(
             child: Observer(
               builder: (_) {
-                final categories =
-                    _categoryStore.filteredCategories;
+                final categories = _categoryStore.filteredCategories;
 
-                if (_categoryStore.isLoading &&
-                    categories.isEmpty) {
+                if (_categoryStore.isLoading && categories.isEmpty) {
                   return const Center(
                     child: CircularProgressIndicator(
                       color: _primaryColor,
