@@ -107,7 +107,7 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
 
       // DRAWER
       drawer: const MainDrawer(
-        currentRoute: 'cctv_analytics',
+        currentRoute: 'cctv',
       ),
 
       // BODY

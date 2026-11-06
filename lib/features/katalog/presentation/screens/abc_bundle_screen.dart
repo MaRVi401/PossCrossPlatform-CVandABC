@@ -49,7 +49,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
 
       // DRAWER
       drawer: const MainDrawer(
-        currentRoute: 'abc_bundle',
+        currentRoute: 'abc',
       ),
 
       // BODY
