@@ -2,15 +2,86 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../shared/widgets/main_drawer.dart';
+import '../../../../shared/utils/currency_formatter.dart';
 import '../stores/product_store.dart';
 import '../stores/category_store.dart';
 import '../../data/models/product_model.dart';
+
+// ============================================================
+// FORMATTER INPUT RUPIAH
+// ============================================================
+
+class RupiahInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.isEmpty) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
+
+    final number = int.tryParse(digits);
+
+    if (number == null) return oldValue;
+
+    final formatted = CurrencyFormatter.format(number);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+// ============================================================
+// FORMATTER STOK: 1000 MENJADI 1.000
+// ============================================================
+
+class ThousandsInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.isEmpty) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
+
+    final number = int.tryParse(digits);
+
+    if (number == null) return oldValue;
+
+    final formatted = NumberFormat.decimalPattern('id_ID').format(number);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+// ============================================================
+// PRODUCT SCREEN
+// ============================================================
 
 class ProductScreen extends StatefulWidget {
   const ProductScreen({super.key});
@@ -23,6 +94,7 @@ class _ProductScreenState extends State<ProductScreen> {
   final _productStore = sl<ProductStore>();
   final _categoryStore = sl<CategoryStore>();
   final _apiClient = sl<ApiClient>();
+
   final _searchController = TextEditingController();
 
   @override
@@ -38,45 +110,100 @@ class _ProductScreenState extends State<ProductScreen> {
     super.dispose();
   }
 
-  /// Membentuk URL gambar lengkap berdasarkan baseUrl ApiClient.
+  // ==========================================================
+  // KONVERSI INPUT MENJADI ANGKA
+  // ==========================================================
+
+  double _parseRupiah(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    return double.tryParse(digits) ?? 0;
+  }
+
+  int _parseStock(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    return int.tryParse(digits) ?? 0;
+  }
+
+  String _formatStock(int value) {
+    return NumberFormat.decimalPattern('id_ID').format(value);
+  }
+
+  void _showMessage(
+    String message, {
+    bool isError = false,
+  }) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: isError ? Colors.red[700] : Colors.green[700],
+        ),
+      );
+  }
+
+  // ==========================================================
+  // RESOLVE URL GAMBAR
+  // ==========================================================
+
   String? _resolveImageUrl(String? rawUrl) {
-    if (rawUrl == null || rawUrl.isEmpty) return null;
+    if (rawUrl == null || rawUrl.trim().isEmpty) {
+      return null;
+    }
 
     if (rawUrl.startsWith('http://') ||
         rawUrl.startsWith('https://')) {
       return rawUrl;
     }
 
-    final dioBaseUrl = _apiClient.client.options.baseUrl;
-    final uri = Uri.parse(dioBaseUrl);
+    final baseUrl = _apiClient.client.options.baseUrl;
+    final uri = Uri.tryParse(baseUrl);
+
+    if (uri == null || uri.host.isEmpty) {
+      return null;
+    }
+
     final origin =
         '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
+
     final cleanPath = rawUrl.startsWith('/') ? rawUrl : '/$rawUrl';
 
     return '$origin$cleanPath';
   }
 
+  // ==========================================================
+  // FORM TAMBAH DAN EDIT PRODUK
+  // ==========================================================
+
   void _showFormModal({ProductModel? product}) {
     final isEdit = product != null;
 
-    final skuController =
-        TextEditingController(text: product?.sku ?? '');
-    final nameController =
-        TextEditingController(text: product?.productName ?? '');
+    final skuController = TextEditingController(
+      text: product?.sku ?? '',
+    );
+
+    final nameController = TextEditingController(
+      text: product?.productName ?? '',
+    );
+
     final buyPriceController = TextEditingController(
-      text: product != null
-          ? product.buyPrice.toStringAsFixed(0)
-          : '',
+      text: product == null
+          ? ''
+          : CurrencyFormatter.format(product.buyPrice),
     );
+
     final sellPriceController = TextEditingController(
-      text: product != null
-          ? product.sellPrice.toStringAsFixed(0)
-          : '',
+      text: product == null
+          ? ''
+          : CurrencyFormatter.format(product.sellPrice),
     );
+
     final stockController = TextEditingController(
-      text: product != null
-          ? product.stockQuantity.toString()
-          : '0',
+      text: product == null
+          ? '0'
+          : _formatStock(product.stockQuantity),
     );
 
     int? selectedCategoryId = product?.categoryId ??
@@ -85,11 +212,13 @@ class _ProductScreenState extends State<ProductScreen> {
             : null);
 
     File? selectedImage;
+
     final formKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(24),
@@ -97,17 +226,15 @@ class _ProductScreenState extends State<ProductScreen> {
       ),
       builder: (modalContext) {
         return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setStateModal) {
-            final existingImageUrl =
-                _resolveImageUrl(product?.imageUrl);
+          builder: (modalContext, setStateModal) {
+            final existingImageUrl = _resolveImageUrl(product?.imageUrl);
 
             return Padding(
               padding: EdgeInsets.only(
                 top: 24,
                 left: 24,
                 right: 24,
-                bottom:
-                    MediaQuery.of(modalContext).viewInsets.bottom + 24,
+                bottom: MediaQuery.of(modalContext).viewInsets.bottom + 24,
               ),
               child: SingleChildScrollView(
                 child: Form(
@@ -116,7 +243,7 @@ class _ProductScreenState extends State<ProductScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Header Modal
+                      // HEADER
                       Row(
                         children: [
                           Container(
@@ -133,136 +260,104 @@ class _ProductScreenState extends State<ProductScreen> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          Text(
-                            isEdit
-                                ? 'Edit Data Produk'
-                                : 'Tambah Produk Baru',
-                            style: Theme.of(modalContext)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF1E1B4B),
-                                ),
+                          Expanded(
+                            child: Text(
+                              isEdit
+                                  ? 'Edit Data Produk'
+                                  : 'Tambah Produk Baru',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E1B4B),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(modalContext),
+                            icon: const Icon(Icons.close),
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 20),
 
-                      // Picker Foto Produk
+                      // FOTO PRODUK
                       Center(
                         child: Stack(
                           children: [
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () async {
-                                  try {
-                                    final picker = ImagePicker();
-                                    final pickedFile =
-                                        await picker.pickImage(
-                                      source: ImageSource.gallery,
-                                      imageQuality: 85,
-                                    );
+                            InkWell(
+                              onTap: () async {
+                                try {
+                                  final picker = ImagePicker();
 
-                                    if (pickedFile != null) {
-                                      setStateModal(() {
-                                        selectedImage =
-                                            File(pickedFile.path);
-                                      });
-                                    }
-                                  } catch (e) {
-                                    if (modalContext.mounted) {
-                                      ScaffoldMessenger.of(modalContext)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Gagal memilih gambar: $e',
-                                          ),
-                                          backgroundColor: Colors.red[700],
-                                        ),
-                                      );
-                                    }
+                                  final pickedFile = await picker.pickImage(
+                                    source: ImageSource.gallery,
+                                    imageQuality: 85,
+                                  );
+
+                                  if (pickedFile != null &&
+                                      modalContext.mounted) {
+                                    setStateModal(() {
+                                      selectedImage = File(pickedFile.path);
+                                    });
                                   }
-                                },
-                                borderRadius: BorderRadius.circular(16),
-                                child: Container(
-                                  height: 110,
-                                  width: 110,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: const Color(0xFF1E1B4B)
-                                          .withAlpha(70),
-                                      width: 1.5,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withAlpha(10),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
+                                } catch (e) {
+                                  _showMessage(
+                                    'Gagal memilih gambar: $e',
+                                    isError: true,
+                                  );
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                height: 110,
+                                width: 110,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: const Color(0xFF1E1B4B)
+                                        .withAlpha(70),
+                                    width: 1.5,
                                   ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(15),
-                                    child: selectedImage != null
-                                        ? Image.file(
-                                            selectedImage!,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : existingImageUrl != null
-                                            ? Image.network(
-                                                existingImageUrl,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) =>
-                                                    const Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    Icon(
-                                                      Icons.broken_image,
-                                                      size: 28,
-                                                      color: Colors.grey,
-                                                    ),
-                                                    SizedBox(height: 4),
-                                                    Text(
-                                                      'Gagal muat',
-                                                      style: TextStyle(
-                                                        fontSize: 10,
-                                                        color: Colors.grey,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              )
-                                            : Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons
-                                                        .add_a_photo_outlined,
-                                                    size: 30,
-                                                    color: const Color(
-                                                      0xFF1E1B4B,
-                                                    ).withAlpha(180),
-                                                  ),
-                                                  const SizedBox(height: 6),
-                                                  const Text(
-                                                    'Upload Foto',
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color:
-                                                          Color(0xFF1E1B4B),
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(15),
+                                  child: selectedImage != null
+                                      ? Image.file(
+                                          selectedImage!,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : existingImageUrl != null
+                                          ? Image.network(
+                                              existingImageUrl,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) =>
+                                                  const Icon(
+                                                Icons.broken_image,
+                                                size: 30,
+                                                color: Colors.grey,
                                               ),
-                                  ),
+                                            )
+                                          : const Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.add_a_photo_outlined,
+                                                  size: 30,
+                                                  color: Color(0xFF1E1B4B),
+                                                ),
+                                                SizedBox(height: 6),
+                                                Text(
+                                                  'Upload Foto',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                 ),
                               ),
                             ),
@@ -293,57 +388,62 @@ class _ProductScreenState extends State<ProductScreen> {
                           ],
                         ),
                       ),
+
                       const SizedBox(height: 20),
 
-                      // Dropdown Kategori
+                      // KATEGORI
                       DropdownButtonFormField<int>(
                         initialValue: selectedCategoryId,
+                        isExpanded: true,
                         decoration: InputDecoration(
                           labelText: 'Kategori Produk',
-                          prefixIcon: const Icon(
-                            Icons.category_outlined,
-                          ),
+                          prefixIcon: const Icon(Icons.category_outlined),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 14,
-                          ),
                         ),
-                        items: _categoryStore.categories.map((cat) {
+                        items: _categoryStore.categories.map((category) {
                           return DropdownMenuItem<int>(
-                            value: cat.categoryId,
-                            child: Text(cat.categoryName),
+                            value: category.categoryId,
+                            child: Text(
+                              category.categoryName,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           );
                         }).toList(),
-                        onChanged: (val) {
+                        onChanged: (value) {
                           setStateModal(() {
-                            selectedCategoryId = val;
+                            selectedCategoryId = value;
                           });
                         },
-                        validator: (val) => val == null
-                            ? 'Pilih kategori terlebih dahulu'
-                            : null,
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Pilih kategori terlebih dahulu';
+                          }
+                          return null;
+                        },
                       ),
+
                       const SizedBox(height: 16),
 
-                      // SKU dan Nama Produk
+                      // SKU DAN NAMA
                       Row(
                         children: [
                           Expanded(
                             child: TextFormField(
                               controller: skuController,
-                              validator: (v) =>
-                                  v == null || v.trim().isEmpty
-                                      ? 'SKU wajib diisi'
-                                      : null,
                               decoration: InputDecoration(
                                 labelText: 'SKU / Kode',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'SKU wajib diisi';
+                                }
+                                return null;
+                              },
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -351,40 +451,53 @@ class _ProductScreenState extends State<ProductScreen> {
                             flex: 2,
                             child: TextFormField(
                               controller: nameController,
-                              validator: (v) =>
-                                  v == null || v.trim().isEmpty
-                                      ? 'Nama wajib diisi'
-                                      : null,
                               decoration: InputDecoration(
                                 labelText: 'Nama Produk',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Nama wajib diisi';
+                                }
+                                return null;
+                              },
                             ),
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 16),
 
-                      // Harga Beli dan Jual
+                      // HARGA BELI DAN JUAL
                       Row(
                         children: [
                           Expanded(
                             child: TextFormField(
                               controller: buyPriceController,
                               keyboardType: TextInputType.number,
-                              validator: (v) =>
-                                  v == null ||
-                                          double.tryParse(v) == null
-                                      ? 'Harga tidak valid'
-                                      : null,
+                              inputFormatters: [
+                                RupiahInputFormatter(),
+                              ],
                               decoration: InputDecoration(
-                                labelText: 'Harga Beli (Rp)',
+                                labelText: 'Harga Beli',
+                                prefixIcon: const Icon(
+                                  Icons.payments_outlined,
+                                ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Harga wajib diisi';
+                                }
+                                if (_parseRupiah(value) <= 0) {
+                                  return 'Harga tidak valid';
+                                }
+                                return null;
+                              },
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -392,31 +505,41 @@ class _ProductScreenState extends State<ProductScreen> {
                             child: TextFormField(
                               controller: sellPriceController,
                               keyboardType: TextInputType.number,
-                              validator: (v) =>
-                                  v == null ||
-                                          double.tryParse(v) == null
-                                      ? 'Harga tidak valid'
-                                      : null,
+                              inputFormatters: [
+                                RupiahInputFormatter(),
+                              ],
                               decoration: InputDecoration(
-                                labelText: 'Harga Jual (Rp)',
+                                labelText: 'Harga Jual',
+                                prefixIcon: const Icon(
+                                  Icons.payments_outlined,
+                                ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Harga wajib diisi';
+                                }
+                                if (_parseRupiah(value) <= 0) {
+                                  return 'Harga tidak valid';
+                                }
+                                return null;
+                              },
                             ),
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 16),
 
-                      // Jumlah Stok
+                      // STOK
                       TextFormField(
                         controller: stockController,
                         keyboardType: TextInputType.number,
-                        validator: (v) =>
-                            v == null || int.tryParse(v) == null
-                                ? 'Stok tidak valid'
-                                : null,
+                        inputFormatters: [
+                          ThousandsInputFormatter(),
+                        ],
                         decoration: InputDecoration(
                           labelText: 'Jumlah Stok Tersedia',
                           prefixIcon: const Icon(
@@ -426,99 +549,131 @@ class _ProductScreenState extends State<ProductScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Stok wajib diisi';
+                          }
+
+                          final stock = _parseStock(value);
+
+                          if (stock < 0) {
+                            return 'Stok tidak valid';
+                          }
+
+                          return null;
+                        },
                       ),
+
                       const SizedBox(height: 24),
 
-                      // Tombol Simpan
+                      // TOMBOL SIMPAN
                       Observer(
                         builder: (_) {
+                          final isLoading = _productStore.isLoading;
+
                           return SizedBox(
                             height: 48,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    const Color(0xFF1E1B4B),
+                                backgroundColor: const Color(0xFF1E1B4B),
                                 foregroundColor: Colors.white,
-                                elevation: 1,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              onPressed: _productStore.isLoading
+                              onPressed: isLoading
                                   ? null
                                   : () async {
-                                      if (!formKey.currentState!
-                                          .validate()) {
+                                      if (!formKey.currentState!.validate()) {
                                         return;
                                       }
 
-                                      final success = isEdit
-                                          ? await _productStore.updateProduct(
-                                              productId: product.productId,
-                                              categoryId:
-                                                  selectedCategoryId!,
-                                              sku: skuController.text.trim(),
-                                              productName:
-                                                  nameController.text.trim(),
-                                              buyPrice: double.parse(
-                                                buyPriceController.text.trim(),
-                                              ),
-                                              sellPrice: double.parse(
-                                                sellPriceController.text.trim(),
-                                              ),
-                                              stockQuantity: int.parse(
-                                                stockController.text.trim(),
-                                              ),
-                                              imageFile: selectedImage,
-                                            )
-                                          : await _productStore.addProduct(
-                                              categoryId:
-                                                  selectedCategoryId!,
-                                              sku: skuController.text.trim(),
-                                              productName:
-                                                  nameController.text.trim(),
-                                              buyPrice: double.parse(
-                                                buyPriceController.text.trim(),
-                                              ),
-                                              sellPrice: double.parse(
-                                                sellPriceController.text.trim(),
-                                              ),
-                                              stockQuantity: int.parse(
-                                                stockController.text.trim(),
-                                              ),
-                                              imageFile: selectedImage,
-                                            );
-
-                                      if (!modalContext.mounted) return;
-
-                                      if (success) {
-                                        Navigator.pop(modalContext);
-                                        ScaffoldMessenger.of(modalContext)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              isEdit
-                                                  ? 'Produk berhasil diperbarui!'
-                                                  : 'Produk berhasil ditambahkan!',
-                                            ),
-                                            backgroundColor: Colors.green[700],
-                                          ),
+                                      if (selectedCategoryId == null) {
+                                        _showMessage(
+                                          'Kategori belum dipilih',
+                                          isError: true,
                                         );
-                                      } else if (_productStore
-                                              .errorMessage !=
-                                          null) {
-                                        ScaffoldMessenger.of(modalContext)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              _productStore.errorMessage!,
-                                            ),
-                                            backgroundColor: Colors.red[700],
-                                          ),
+                                        return;
+                                      }
+
+                                      // Konversi semua input ke angka murni.
+                                      final double buyPrice =
+                                          _parseRupiah(
+                                        buyPriceController.text,
+                                      );
+
+                                      final double sellPrice =
+                                          _parseRupiah(
+                                        sellPriceController.text,
+                                      );
+
+                                      final int stockQuantity =
+                                          _parseStock(
+                                        stockController.text,
+                                      );
+
+                                      try {
+                                        final bool success;
+
+                                        if (isEdit) {
+                                          success =
+                                              await _productStore.updateProduct(
+                                            productId: product.productId,
+                                            categoryId: selectedCategoryId!,
+                                            sku: skuController.text.trim(),
+                                            productName:
+                                                nameController.text.trim(),
+                                            buyPrice: buyPrice,
+                                            sellPrice: sellPrice,
+                                            stockQuantity: stockQuantity,
+                                            imageFile: selectedImage,
+                                          );
+                                        } else {
+                                          success =
+                                              await _productStore.addProduct(
+                                            categoryId: selectedCategoryId!,
+                                            sku: skuController.text.trim(),
+                                            productName:
+                                                nameController.text.trim(),
+                                            buyPrice: buyPrice,
+                                            sellPrice: sellPrice,
+                                            stockQuantity: stockQuantity,
+                                            imageFile: selectedImage,
+                                          );
+                                        }
+
+                                        if (!mounted ||
+                                            !modalContext.mounted) {
+                                          return;
+                                        }
+
+                                        if (success) {
+                                          Navigator.pop(modalContext);
+
+                                          _showMessage(
+                                            isEdit
+                                                ? 'Produk berhasil diperbarui!'
+                                                : 'Produk berhasil ditambahkan!',
+                                          );
+                                        } else {
+                                          final error =
+                                              _productStore.errorMessage;
+
+                                          _showMessage(
+                                            error?.isNotEmpty == true
+                                                ? error!
+                                                : 'Gagal menyimpan produk. Periksa data dan koneksi server.',
+                                            isError: true,
+                                          );
+                                        }
+                                      } catch (e) {
+                                        _showMessage(
+                                          'Terjadi kesalahan saat menyimpan produk: $e',
+                                          isError: true,
                                         );
                                       }
                                     },
-                              child: _productStore.isLoading
+                              child: isLoading
                                   ? const SizedBox(
                                       height: 20,
                                       width: 20,
@@ -548,70 +703,87 @@ class _ProductScreenState extends State<ProductScreen> {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      skuController.dispose();
+      nameController.dispose();
+      buyPriceController.dispose();
+      sellPriceController.dispose();
+      stockController.dispose();
+    });
   }
+
+  // ==========================================================
+  // HAPUS PRODUK
+  // ==========================================================
 
   void _confirmDelete(ProductModel product) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Row(
-          children: [
-            Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.redAccent,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.redAccent,
+              ),
+              SizedBox(width: 8),
+              Text('Hapus Produk'),
+            ],
+          ),
+          content: Text(
+            'Apakah kamu yakin ingin menghapus produk "${product.productName}"?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Batal'),
             ),
-            SizedBox(width: 8),
-            Text('Hapus Produk'),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+
+                try {
+                  final success = await _productStore.deleteProduct(
+                    product.productId,
+                  );
+
+                  if (!mounted) return;
+
+                  if (success) {
+                    _showMessage('Produk berhasil dihapus');
+                  } else {
+                    _showMessage(
+                      _productStore.errorMessage ??
+                          'Gagal menghapus produk',
+                      isError: true,
+                    );
+                  }
+                } catch (e) {
+                  _showMessage(
+                    'Gagal menghapus produk: $e',
+                    isError: true,
+                  );
+                }
+              },
+              child: const Text('Hapus'),
+            ),
           ],
-        ),
-        content: Text(
-          'Apakah Anda yakin ingin menghapus produk "${product.productName}"?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-
-              final success = await _productStore.deleteProduct(
-                product.productId,
-              );
-
-              if (!mounted) return;
-
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Produk berhasil dihapus'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else if (_productStore.errorMessage != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(_productStore.errorMessage!),
-                    backgroundColor: Colors.red[700],
-                  ),
-                );
-              }
-            },
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
+
+  // ==========================================================
+  // BUILD SCREEN
+  // ==========================================================
 
   @override
   Widget build(BuildContext context) {
@@ -620,9 +792,7 @@ class _ProductScreenState extends State<ProductScreen> {
       appBar: AppBar(
         title: const Text(
           'Manajemen Produk',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF1E1B4B),
         foregroundColor: Colors.white,
@@ -638,7 +808,9 @@ class _ProductScreenState extends State<ProductScreen> {
           ),
         ],
       ),
-      drawer: const MainDrawer(currentRoute: 'product'),
+      drawer: const MainDrawer(
+        currentRoute: 'product',
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showFormModal(),
         backgroundColor: const Color(0xFF1E1B4B),
@@ -648,13 +820,13 @@ class _ProductScreenState extends State<ProductScreen> {
       ),
       body: Column(
         children: [
-          // Bar Pencarian
+          // PENCARIAN
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
               controller: _searchController,
-              onChanged: (val) {
-                _productStore.setSearchQuery(val);
+              onChanged: (value) {
+                _productStore.setSearchQuery(value);
                 setState(() {});
               },
               decoration: InputDecoration(
@@ -665,10 +837,7 @@ class _ProductScreenState extends State<ProductScreen> {
                 ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(
-                          Icons.clear,
-                          color: Colors.grey,
-                        ),
+                        icon: const Icon(Icons.clear, color: Colors.grey),
                         onPressed: () {
                           _searchController.clear();
                           _productStore.setSearchQuery('');
@@ -690,7 +859,7 @@ class _ProductScreenState extends State<ProductScreen> {
             ),
           ),
 
-          // Daftar Produk
+          // DAFTAR PRODUK
           Expanded(
             child: Observer(
               builder: (_) {
@@ -747,8 +916,10 @@ class _ProductScreenState extends State<ProductScreen> {
                     itemBuilder: (context, index) {
                       final product =
                           _productStore.filteredProducts[index];
-                      final fullImageUrl =
+
+                      final imageUrl =
                           _resolveImageUrl(product.imageUrl);
+
                       final isLowStock = product.stockQuantity < 5;
 
                       return Container(
@@ -768,71 +939,30 @@ class _ProductScreenState extends State<ProductScreen> {
                           borderRadius: BorderRadius.circular(16),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(16),
-                            onTap: () =>
-                                _showFormModal(product: product),
+                            onTap: () => _showFormModal(product: product),
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Row(
                                 children: [
-                                  // Thumbnail Foto Produk
+                                  // FOTO
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
-                                    child: fullImageUrl != null
+                                    child: imageUrl != null
                                         ? Image.network(
-                                            fullImageUrl,
+                                            imageUrl,
                                             width: 68,
                                             height: 68,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) =>
-                                                Container(
-                                              width: 68,
-                                              height: 68,
-                                              color: Colors.grey.shade200,
-                                              child: const Icon(
-                                                Icons.image_not_supported,
-                                                color: Colors.grey,
-                                              ),
-                                            ),
-                                            loadingBuilder: (
-                                              context,
-                                              child,
-                                              loadingProgress,
-                                            ) {
-                                              if (loadingProgress == null) {
-                                                return child;
-                                              }
-
-                                              return Container(
-                                                width: 68,
-                                                height: 68,
-                                                color: Colors.grey.shade100,
-                                                child: const Center(
-                                                  child: SizedBox(
-                                                    width: 16,
-                                                    height: 16,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                    ),
-                                                  ),
-                                                ),
-                                              );
+                                            errorBuilder: (_, __, ___) {
+                                              return _imagePlaceholder();
                                             },
                                           )
-                                        : Container(
-                                            width: 68,
-                                            height: 68,
-                                            color: const Color(0xFFEEF2FF),
-                                            child: const Icon(
-                                              Icons.inventory_2_outlined,
-                                              color: Color(0xFF1E1B4B),
-                                              size: 32,
-                                            ),
-                                          ),
+                                        : _imagePlaceholder(),
                                   ),
+
                                   const SizedBox(width: 14),
 
-                                  // Detail Produk
+                                  // DETAIL PRODUK
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -865,7 +995,9 @@ class _ProductScreenState extends State<ProductScreen> {
                                               WrapCrossAlignment.center,
                                           children: [
                                             Text(
-                                              'Rp ${product.sellPrice.toStringAsFixed(0)}',
+                                              CurrencyFormatter.format(
+                                                product.sellPrice,
+                                              ),
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 color: Color(0xFF1E1B4B),
@@ -886,7 +1018,7 @@ class _ProductScreenState extends State<ProductScreen> {
                                                     BorderRadius.circular(6),
                                               ),
                                               child: Text(
-                                                'Stok: ${product.stockQuantity}',
+                                                'Stok: ${_formatStock(product.stockQuantity)}',
                                                 style: TextStyle(
                                                   fontSize: 10,
                                                   fontWeight: FontWeight.bold,
@@ -902,29 +1034,26 @@ class _ProductScreenState extends State<ProductScreen> {
                                     ),
                                   ),
 
-                                  // Tombol Edit dan Hapus
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.edit_outlined,
-                                          color: Color(0xFF1E1B4B),
-                                          size: 20,
-                                        ),
-                                        onPressed: () =>
-                                            _showFormModal(product: product),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.delete_outline,
-                                          color: Colors.redAccent,
-                                          size: 20,
-                                        ),
-                                        onPressed: () =>
-                                            _confirmDelete(product),
-                                      ),
-                                    ],
+                                  // TOMBOL EDIT DAN HAPUS
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      color: Color(0xFF1E1B4B),
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      _showFormModal(product: product);
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      _confirmDelete(product);
+                                    },
                                   ),
                                 ],
                               ),
@@ -939,6 +1068,19 @@ class _ProductScreenState extends State<ProductScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _imagePlaceholder() {
+    return Container(
+      width: 68,
+      height: 68,
+      color: const Color(0xFFEEF2FF),
+      child: const Icon(
+        Icons.inventory_2_outlined,
+        color: Color(0xFF1E1B4B),
+        size: 32,
       ),
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
-import 'package:intl/intl.dart';
 import '../../../../app/di/injection.dart';
+import '../../../../shared/utils/currency_formatter.dart';
 import '../../../../shared/widgets/main_drawer.dart';
 import '../stores/sales_report_store.dart';
 
@@ -14,7 +14,7 @@ class SalesReportScreen extends StatefulWidget {
 
 class _SalesReportScreenState extends State<SalesReportScreen> {
   final _store = sl<SalesReportStore>();
-  final _currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  // Hapus deklarasi _currencyFormat di sini agarState lebih bersih
 
   @override
   void initState() {
@@ -27,7 +27,10 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      initialDateRange: DateTimeRange(start: _store.startDate, end: _store.endDate),
+      initialDateRange: DateTimeRange(
+        start: _store.startDate,
+        end: _store.endDate,
+      ),
       builder: (context, child) {
         return Theme(
           data: ThemeData.light().copyWith(
@@ -66,7 +69,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
           ),
         ],
       ),
-      drawer: const MainDrawer(currentRoute: 'sales_report'),
+      drawer: const MainDrawer(currentRoute: '/reports/sales'),
       body: Column(
         children: [
           // Filter Tanggal & Action Export
@@ -79,7 +82,10 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                   onTap: _selectDateRange,
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(25),
                       borderRadius: BorderRadius.circular(12),
@@ -90,101 +96,158 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.calendar_today_rounded, color: Colors.amber, size: 18),
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              color: Colors.amber,
+                              size: 18,
+                            ),
                             SizedBox(width: 10),
                             Text(
                               'Filter Periode:',
-                              style: TextStyle(color: Colors.white70, fontSize: 13),
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
                             ),
                           ],
                         ),
                         Observer(
-                          builder: (_) => Text(
-                            '${_store.formattedStartDate}  s/d  ${_store.formattedEndDate}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
+                          builder:
+                              (_) => Text(
+                                '${_store.formattedStartDate}  s/d  ${_store.formattedEndDate}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
                         ),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Tombol Export PDF & Excel
                 Observer(
-                  builder: (_) => Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red.shade700,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          onPressed: _store.isExportingPdf
-                              ? null
-                              : () async {
-                                  final success = await _store.exportPdf();
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        success ? 'Berhasil mengunduh PDF!' : 'Gagal mengunduh PDF.',
+                  builder:
+                      (_) => Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red.shade700,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              onPressed:
+                                  _store.isExportingPdf
+                                      ? null
+                                      : () async {
+                                        final success =
+                                            await _store.exportPdf();
+                                        if (!context.mounted) return;
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              success
+                                                  ? 'Berhasil mengunduh PDF!'
+                                                  : 'Gagal mengunduh PDF.',
+                                            ),
+                                            backgroundColor:
+                                                success
+                                                    ? Colors.green
+                                                    : Colors.red,
+                                          ),
+                                        );
+                                      },
+                              icon:
+                                  _store.isExportingPdf
+                                      ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                      : const Icon(
+                                        Icons.picture_as_pdf_rounded,
+                                        size: 18,
                                       ),
-                                      backgroundColor: success ? Colors.green : Colors.red,
-                                    ),
-                                  );
-                                },
-                          icon: _store.isExportingPdf
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.picture_as_pdf_rounded, size: 18),
-                          label: Text(_store.isExportingPdf ? 'Mengunduh...' : 'Export PDF'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF10B981),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              label: Text(
+                                _store.isExportingPdf
+                                    ? 'Mengunduh...'
+                                    : 'Export PDF',
+                              ),
+                            ),
                           ),
-                          onPressed: _store.isExportingExcel
-                              ? null
-                              : () async {
-                                  final success = await _store.exportExcel();
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        success ? 'Berhasil mengunduh Excel!' : 'Gagal mengunduh Excel.',
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF10B981),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              onPressed:
+                                  _store.isExportingExcel
+                                      ? null
+                                      : () async {
+                                        final success =
+                                            await _store.exportExcel();
+                                        if (!context.mounted) return;
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              success
+                                                  ? 'Berhasil mengunduh Excel!'
+                                                  : 'Gagal mengunduh Excel.',
+                                            ),
+                                            backgroundColor:
+                                                success
+                                                    ? Colors.green
+                                                    : Colors.red,
+                                          ),
+                                        );
+                                      },
+                              icon:
+                                  _store.isExportingExcel
+                                      ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                      : const Icon(
+                                        Icons.table_chart_rounded,
+                                        size: 18,
                                       ),
-                                      backgroundColor: success ? Colors.green : Colors.red,
-                                    ),
-                                  );
-                                },
-                          icon: _store.isExportingExcel
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.table_chart_rounded, size: 18),
-                          label: Text(_store.isExportingExcel ? 'Mengunduh...' : 'Export Excel'),
-                        ),
+                              label: Text(
+                                _store.isExportingExcel
+                                    ? 'Mengunduh...'
+                                    : 'Export Excel',
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
                 ),
               ],
             ),
@@ -201,7 +264,10 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                       children: [
                         CircularProgressIndicator(),
                         SizedBox(height: 12),
-                        Text('Memuat laporan penjualan...', style: TextStyle(color: Colors.grey)),
+                        Text(
+                          'Memuat laporan penjualan...',
+                          style: TextStyle(color: Colors.grey),
+                        ),
                       ],
                     ),
                   );
@@ -214,9 +280,16 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                          const Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.red,
+                          ),
                           const SizedBox(height: 12),
-                          Text(_store.errorMessage!, textAlign: TextAlign.center),
+                          Text(
+                            _store.errorMessage!,
+                            textAlign: TextAlign.center,
+                          ),
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () => _store.fetchSalesReport(),
@@ -247,7 +320,9 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                         children: [
                           _buildSummaryCard(
                             title: 'Total Omzet',
-                            value: _currencyFormat.format(summary['total_sales'] ?? 0),
+                            value: CurrencyFormatter.format(
+                              summary['total_sales'],
+                            ),
                             icon: Icons.payments_rounded,
                             color: const Color(0xFF10B981),
                           ),
@@ -265,7 +340,9 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                           ),
                           _buildSummaryCard(
                             title: 'Total Diskon',
-                            value: _currencyFormat.format(summary['total_discount'] ?? 0),
+                            value: CurrencyFormatter.format(
+                              summary['total_discount'],
+                            ),
                             icon: Icons.discount_rounded,
                             color: const Color(0xFFF43F5E),
                           ),
@@ -286,7 +363,10 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                           ),
                           Text(
                             '${transactions.length} Data',
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -302,9 +382,15 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                           ),
                           child: Column(
                             children: [
-                              Icon(Icons.inbox_outlined, size: 48, color: Colors.grey.shade400),
+                              Icon(
+                                Icons.inbox_outlined,
+                                size: 48,
+                                color: Colors.grey.shade400,
+                              ),
                               const SizedBox(height: 8),
-                              const Text('Tidak ada transaksi pada periode ini.'),
+                              const Text(
+                                'Tidak ada transaksi pada periode ini.',
+                              ),
                             ],
                           ),
                         )
@@ -313,12 +399,16 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: transactions.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          separatorBuilder:
+                              (_, __) => const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final trx = transactions[index];
                             final items = (trx['items'] as List?) ?? [];
                             final itemListText = items
-                                .map((i) => '${i['product']?['product_name'] ?? 'Produk'} (${i['quantity']}x)')
+                                .map(
+                                  (i) =>
+                                      '${i['product']?['product_name'] ?? 'Produk'} (${i['quantity']}x)',
+                                )
                                 .join(', ');
 
                             return Container(
@@ -334,14 +424,23 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                                 ],
                               ),
                               child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 6,
+                                ),
                                 leading: CircleAvatar(
                                   backgroundColor: Colors.indigo.shade50,
-                                  child: const Icon(Icons.receipt_rounded, color: Colors.indigo),
+                                  child: const Icon(
+                                    Icons.receipt_rounded,
+                                    color: Colors.indigo,
+                                  ),
                                 ),
                                 title: Text(
                                   trx['invoice_number'] ?? '-',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
                                 ),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,12 +448,20 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       'Tgl: ${trx['transaction_date'] ?? '-'} • Kasir: ${trx['admin']?['name'] ?? 'Admin'}',
-                                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade600,
+                                      ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      itemListText.isNotEmpty ? itemListText : 'Tidak ada detail barang',
-                                      style: const TextStyle(fontSize: 12, color: Colors.black87),
+                                      itemListText.isNotEmpty
+                                          ? itemListText
+                                          : 'Tidak ada detail barang',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black87,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -365,17 +472,26 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      _currencyFormat.format(double.tryParse(trx['final_amount'].toString()) ?? 0),
+                                      CurrencyFormatter.format(
+                                        trx['final_amount'],
+                                      ),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: Color(0xFF10B981),
                                         fontSize: 13,
                                       ),
                                     ),
-                                    if ((double.tryParse(trx['discount_amount'].toString()) ?? 0) > 0)
+                                    if ((double.tryParse(
+                                              trx['discount_amount'].toString(),
+                                            ) ??
+                                            0) >
+                                        0)
                                       Text(
-                                        'Disc: ${_currencyFormat.format(double.parse(trx['discount_amount'].toString()))}',
-                                        style: const TextStyle(fontSize: 10, color: Colors.red),
+                                        'Disc: ${CurrencyFormatter.format(trx['discount_amount'])}',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.red,
+                                        ),
                                       ),
                                   ],
                                 ),
@@ -420,7 +536,10 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              Text(
+                title,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
               Icon(icon, size: 20, color: color),
             ],
           ),

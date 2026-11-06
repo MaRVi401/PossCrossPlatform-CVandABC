@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
-
 import '../../../../app/di/injection.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../shared/widgets/main_drawer.dart';
 import '../../../katalog/presentation/stores/product_store.dart';
 import '../../../katalog/presentation/stores/abc_store.dart';
+import 'package:flutter/services.dart';
+import '../../../../shared/utils/currency_formatter.dart';
 import '../stores/pos_store.dart';
 
 const Color _primaryColor = Color(0xFF1E1B4B);
@@ -54,8 +55,7 @@ class _PosScreenState extends State<PosScreen> {
   String? _resolveImageUrl(String? rawUrl) {
     if (rawUrl == null || rawUrl.isEmpty) return null;
 
-    if (rawUrl.startsWith('http://') ||
-        rawUrl.startsWith('https://')) {
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
       return rawUrl;
     }
 
@@ -65,9 +65,7 @@ class _PosScreenState extends State<PosScreen> {
     final origin =
         '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
 
-    final cleanPath = rawUrl.startsWith('/')
-        ? rawUrl
-        : '/$rawUrl';
+    final cleanPath = rawUrl.startsWith('/') ? rawUrl : '/$rawUrl';
 
     return '$origin$cleanPath';
   }
@@ -101,8 +99,7 @@ class _PosScreenState extends State<PosScreen> {
         title: const Text('Transaksi Berhasil!'),
         content: Text(
           'Kode Invoice: ${result['invoice_number']}\n'
-          'Kembalian: Rp '
-          '${(result['change_amount'] as num).toStringAsFixed(0)}',
+          'Kembalian: ${CurrencyFormatter.format(result['change_amount'])}',
         ),
         actions: [
           TextButton(
@@ -221,8 +218,7 @@ class _PosScreenState extends State<PosScreen> {
       flex: 3,
       child: Observer(
         builder: (_) {
-          if (_productStore.isLoading &&
-              _productStore.products.isEmpty) {
+          if (_productStore.isLoading && _productStore.products.isEmpty) {
             return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -283,8 +279,7 @@ class _PosScreenState extends State<PosScreen> {
 
           return GridView.builder(
             padding: const EdgeInsets.all(8),
-            gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               childAspectRatio: 0.72,
               crossAxisSpacing: 8,
@@ -292,11 +287,9 @@ class _PosScreenState extends State<PosScreen> {
             ),
             itemCount: _productStore.filteredProducts.length,
             itemBuilder: (context, index) {
-              final product =
-                  _productStore.filteredProducts[index];
+              final product = _productStore.filteredProducts[index];
 
-              final fullImageUrl =
-                  _resolveImageUrl(product.imageUrl);
+              final fullImageUrl = _resolveImageUrl(product.imageUrl);
 
               return InkWell(
                 onTap: () => _posStore.addToCart(product),
@@ -309,8 +302,7 @@ class _PosScreenState extends State<PosScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
                         child: Stack(
@@ -349,8 +341,7 @@ class _PosScreenState extends State<PosScreen> {
                                           child: SizedBox(
                                             width: 20,
                                             height: 20,
-                                            child:
-                                                CircularProgressIndicator(
+                                            child: CircularProgressIndicator(
                                               strokeWidth: 2,
                                             ),
                                           ),
@@ -370,8 +361,7 @@ class _PosScreenState extends State<PosScreen> {
                               top: 6,
                               left: 6,
                               child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(
+                                padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
                                   vertical: 2,
                                 ),
@@ -379,8 +369,7 @@ class _PosScreenState extends State<PosScreen> {
                                   color: product.stockQuantity < 5
                                       ? Colors.red.withAlpha(230)
                                       : Colors.black.withAlpha(153),
-                                  borderRadius:
-                                      BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
                                   'Stok: ${product.stockQuantity}',
@@ -398,8 +387,7 @@ class _PosScreenState extends State<PosScreen> {
                       Padding(
                         padding: const EdgeInsets.all(8),
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               product.productName,
@@ -412,7 +400,7 @@ class _PosScreenState extends State<PosScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Rp ${product.sellPrice.toStringAsFixed(0)}',
+                              CurrencyFormatter.format(product.sellPrice),
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: _primaryColor,
@@ -442,8 +430,7 @@ class _PosScreenState extends State<PosScreen> {
         builder: (_) => Column(
           children: [
             Row(
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Keranjang',
@@ -484,8 +471,7 @@ class _PosScreenState extends State<PosScreen> {
                         final item = _posStore.cart[index];
 
                         return Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               item.productName,
@@ -497,12 +483,10 @@ class _PosScreenState extends State<PosScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 IconButton(
-                                  visualDensity:
-                                      VisualDensity.compact,
+                                  visualDensity: VisualDensity.compact,
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
                                     minWidth: 28,
@@ -512,8 +496,7 @@ class _PosScreenState extends State<PosScreen> {
                                     Icons.remove_circle_outline,
                                     size: 16,
                                   ),
-                                  onPressed: () =>
-                                      _posStore.updateQty(
+                                  onPressed: () => _posStore.updateQty(
                                     index,
                                     -1,
                                   ),
@@ -525,8 +508,7 @@ class _PosScreenState extends State<PosScreen> {
                                   ),
                                 ),
                                 IconButton(
-                                  visualDensity:
-                                      VisualDensity.compact,
+                                  visualDensity: VisualDensity.compact,
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
                                     minWidth: 28,
@@ -536,8 +518,7 @@ class _PosScreenState extends State<PosScreen> {
                                     Icons.add_circle_outline,
                                     size: 16,
                                   ),
-                                  onPressed: () =>
-                                      _posStore.updateQty(
+                                  onPressed: () => _posStore.updateQty(
                                     index,
                                     1,
                                   ),
@@ -552,11 +533,9 @@ class _PosScreenState extends State<PosScreen> {
             ),
             if (_posStore.discountAmount > 0)
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 2),
+                padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Text(
-                  'Diskon: -Rp '
-                  '${_posStore.discountAmount.toStringAsFixed(0)}',
+                  'Diskon: -${CurrencyFormatter.format(_posStore.discountAmount)}',
                   style: const TextStyle(
                     color: Colors.red,
                     fontSize: 10,
@@ -565,8 +544,7 @@ class _PosScreenState extends State<PosScreen> {
                 ),
               ),
             Text(
-              'Total: Rp '
-              '${_posStore.finalTotal.toStringAsFixed(0)}',
+              'Total: ${CurrencyFormatter.format(_posStore.finalTotal)}',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: _primaryColor,
@@ -585,9 +563,7 @@ class _PosScreenState extends State<PosScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                onPressed: _posStore.cart.isEmpty
-                    ? null
-                    : _showPaymentModal,
+                onPressed: _posStore.cart.isEmpty ? null : _showPaymentModal,
                 child: const Text(
                   'Bayar',
                   style: TextStyle(fontSize: 12),
@@ -653,6 +629,37 @@ class _PaymentSheet extends StatefulWidget {
   State<_PaymentSheet> createState() => _PaymentSheetState();
 }
 
+class RupiahInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
+
+    if (digits.isEmpty) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
+
+    final formatted = CurrencyFormatter.format(
+      int.parse(digits),
+    );
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(
+        offset: formatted.length,
+      ),
+    );
+  }
+}
+
 class _PaymentSheetState extends State<_PaymentSheet> {
   final _formKey = GlobalKey<FormState>();
 
@@ -666,7 +673,9 @@ class _PaymentSheetState extends State<_PaymentSheet> {
     super.initState();
 
     _paidController = TextEditingController(
-      text: widget.posStore.finalTotal.toStringAsFixed(0),
+      text: CurrencyFormatter.format(
+        widget.posStore.finalTotal,
+      ),
     );
   }
 
@@ -676,11 +685,16 @@ class _PaymentSheetState extends State<_PaymentSheet> {
     super.dispose();
   }
 
-  double get _paidAmount =>
-      double.tryParse(_paidController.text) ?? 0;
+  double get _paidAmount {
+    final digits = _paidController.text.replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
 
-  double get _changeAmount =>
-      _paidAmount - widget.posStore.finalTotal;
+    return double.tryParse(digits) ?? 0;
+  }
+
+  double get _changeAmount => _paidAmount - widget.posStore.finalTotal;
 
   Future<void> _submitPayment() async {
     if (_isProcessing) return;
@@ -798,8 +812,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
                       'Total Tagihan:',
@@ -809,7 +822,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                     ),
                     Flexible(
                       child: Text(
-                        'Rp ${widget.posStore.finalTotal.toStringAsFixed(0)}',
+                        CurrencyFormatter.format(widget.posStore.finalTotal),
                         textAlign: TextAlign.end,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
@@ -826,16 +839,18 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                 controller: _paidController,
                 enabled: !_isProcessing,
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  RupiahInputFormatter(),
+                ],
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  labelText: 'Uang Diterima (Rp)',
+                  labelText: 'Uang Diterima',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 validator: (value) {
-                  final amount =
-                      double.tryParse(value ?? '') ?? 0;
+                  final amount = _paidAmount;
 
                   if (amount < widget.posStore.finalTotal) {
                     return 'Uang pembayaran kurang!';
@@ -854,13 +869,10 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _changeAmount >= 0
-                          ? 'Kembalian:'
-                          : 'Uang Kurang:',
+                      _changeAmount >= 0 ? 'Kembalian:' : 'Uang Kurang:',
                       style: TextStyle(
                         color: _changeAmount >= 0
                             ? Colors.green.shade900
@@ -870,7 +882,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                     ),
                     Flexible(
                       child: Text(
-                        'Rp ${_changeAmount.abs().toStringAsFixed(0)}',
+                        CurrencyFormatter.format(_changeAmount.abs()),
                         textAlign: TextAlign.end,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
@@ -895,8 +907,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed:
-                      _isProcessing ? null : _submitPayment,
+                  onPressed: _isProcessing ? null : _submitPayment,
                   child: _isProcessing
                       ? const SizedBox(
                           height: 20,

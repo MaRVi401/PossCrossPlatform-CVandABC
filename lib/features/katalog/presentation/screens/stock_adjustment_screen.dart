@@ -1,11 +1,57 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../shared/widgets/main_drawer.dart';
 import '../stores/stock_adjustment_store.dart';
 import '../stores/product_store.dart';
+
+// ============================================================
+// FORMATTER ANGKA RIBUAN
+// Contoh: 1000 menjadi 1.000
+// ============================================================
+
+class StockThousandsInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
+
+    if (digits.isEmpty) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
+
+    final number = int.tryParse(digits);
+
+    if (number == null) {
+      return oldValue;
+    }
+
+    final formatted = NumberFormat.decimalPattern('id_ID').format(number);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(
+        offset: formatted.length,
+      ),
+    );
+  }
+}
+
+// ============================================================
+// STOCK ADJUSTMENT SCREEN
+// ============================================================
 
 class StockAdjustmentScreen extends StatefulWidget {
   const StockAdjustmentScreen({super.key});
@@ -29,15 +75,63 @@ class _StockAdjustmentScreenState
     _refreshData();
   }
 
+  // ==========================================================
+  // REFRESH DATA
+  // ==========================================================
+
   Future<void> _refreshData() async {
-    await Future.wait([
-      _adjustmentStore.fetchAdjustments(),
-      _productStore.fetchProducts(),
-    ]);
+    try {
+      await Future.wait([
+        _adjustmentStore.fetchAdjustments(),
+        _productStore.fetchProducts(),
+      ]);
+    } catch (e) {
+      if (mounted) {
+        _showMessage(
+          'Gagal memuat data: $e',
+          isError: true,
+        );
+      }
+    }
   }
 
+  // ==========================================================
+  // FORMAT STOK
+  // ==========================================================
+
+  String _formatStock(int value) {
+    return NumberFormat.decimalPattern('id_ID').format(value);
+  }
+
+  // ==========================================================
+  // NOTIFIKASI
+  // ==========================================================
+
+  void _showMessage(
+    String message, {
+    bool isError = false,
+  }) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: isError
+              ? Colors.red.shade700
+              : Colors.green.shade700,
+        ),
+      );
+  }
+
+  // ==========================================================
+  // MODAL TAMBAH PENYESUAIAN STOK
+  // ==========================================================
+
   void _showAddAdjustmentModal() {
-    final uniqueProducts = <int, dynamic>{};
+    // Menghindari produk duplikat berdasarkan ID.
+    final Map<int, dynamic> uniqueProducts = {};
 
     for (final product in _productStore.products) {
       uniqueProducts[product.productId] = product;
@@ -46,11 +140,9 @@ class _StockAdjustmentScreenState
     final productList = uniqueProducts.values.toList();
 
     if (productList.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Data produk belum tersedia.'),
-          backgroundColor: Colors.orange,
-        ),
+      _showMessage(
+        'Data produk belum tersedia. Silakan refresh terlebih dahulu.',
+        isError: true,
       );
       return;
     }
@@ -69,12 +161,18 @@ class _StockAdjustmentScreenState
         return _AddAdjustmentSheet(
           products: productList,
           adjustmentStore: _adjustmentStore,
-          pageContext: context,
-          onSuccess: _refreshData,
+          formatStock: _formatStock,
+          onSuccess: () async {
+            await _refreshData();
+          },
         );
       },
     );
   }
+
+  // ==========================================================
+  // BUILD
+  // ==========================================================
 
   @override
   Widget build(BuildContext context) {
@@ -130,8 +228,7 @@ class _StockAdjustmentScreenState
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
                   SizedBox(
-                    height:
-                        MediaQuery.of(context).size.height * 0.55,
+                    height: MediaQuery.of(context).size.height * 0.55,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -170,14 +267,20 @@ class _StockAdjustmentScreenState
               itemBuilder: (context, index) {
                 final item = _adjustmentStore.adjustments[index];
 
-                Color badgeColor = Colors.blue;
+                Color badgeColor;
 
-                if (item.adjustmentType == 'IN') {
-                  badgeColor = Colors.green;
-                } else if (item.adjustmentType == 'OUT') {
-                  badgeColor = Colors.orange;
-                } else if (item.adjustmentType == 'CORRECTION') {
-                  badgeColor = Colors.purple;
+                switch (item.adjustmentType) {
+                  case 'IN':
+                    badgeColor = Colors.green;
+                    break;
+                  case 'OUT':
+                    badgeColor = Colors.orange;
+                    break;
+                  case 'CORRECTION':
+                    badgeColor = Colors.purple;
+                    break;
+                  default:
+                    badgeColor = Colors.blue;
                 }
 
                 return Card(
@@ -191,7 +294,7 @@ class _StockAdjustmentScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Nama Produk dan Badge
+                        // NAMA PRODUK DAN BADGE
                         Row(
                           children: [
                             Expanded(
@@ -246,13 +349,13 @@ class _StockAdjustmentScreenState
 
                         const Divider(height: 18),
 
-                        // Jumlah dan Pengguna
+                        // JUMLAH DAN PENGGUNA
                         Wrap(
                           alignment: WrapAlignment.spaceBetween,
                           runSpacing: 6,
                           children: [
                             Text(
-                              'Jumlah: ${item.quantityChanged} Unit',
+                              'Jumlah: ${_formatStock(item.quantityChanged.abs())} Unit',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w500,
                               ),
@@ -269,7 +372,7 @@ class _StockAdjustmentScreenState
 
                         const SizedBox(height: 8),
 
-                        // Alasan
+                        // ALASAN
                         Text(
                           'Alasan: ${item.reason}',
                           style: const TextStyle(
@@ -290,21 +393,21 @@ class _StockAdjustmentScreenState
   }
 }
 
-// ======================================================
+// ============================================================
 // FORM MODAL PENYESUAIAN STOK
-// ======================================================
+// ============================================================
 
 class _AddAdjustmentSheet extends StatefulWidget {
   final List<dynamic> products;
   final StockAdjustmentStore adjustmentStore;
-  final BuildContext pageContext;
   final Future<void> Function() onSuccess;
+  final String Function(int) formatStock;
 
   const _AddAdjustmentSheet({
     required this.products,
     required this.adjustmentStore,
-    required this.pageContext,
     required this.onSuccess,
+    required this.formatStock,
   });
 
   @override
@@ -321,6 +424,7 @@ class _AddAdjustmentSheetState
   final _reasonController = TextEditingController();
 
   late int selectedProductId;
+
   String selectedType = 'IN';
 
   bool isSaving = false;
@@ -339,10 +443,34 @@ class _AddAdjustmentSheetState
     super.dispose();
   }
 
+  // ==========================================================
+  // PARSE JUMLAH STOK
+  // Contoh: "1.000" menjadi 1000
+  // ==========================================================
+
+  int _parseQuantity(String value) {
+    final digits = value.replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
+
+    return int.tryParse(digits) ?? 0;
+  }
+
+  // ==========================================================
+  // SIMPAN PENYESUAIAN STOK
+  // ==========================================================
+
   Future<void> _saveAdjustment() async {
     if (isSaving) return;
 
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final quantity = _parseQuantity(_qtyController.text);
+
+    if (quantity <= 0) {
       return;
     }
 
@@ -355,41 +483,37 @@ class _AddAdjustmentSheetState
           await widget.adjustmentStore.createAdjustment(
         productId: selectedProductId,
         adjustmentType: selectedType,
-        quantity: int.parse(_qtyController.text.trim()),
+        quantity: quantity,
         reason: _reasonController.text.trim(),
       );
 
       if (!mounted) return;
 
       if (success) {
+        // Tutup modal terlebih dahulu.
         Navigator.of(context).pop();
 
-        if (widget.pageContext.mounted) {
-          widget.onSuccess();
+        // Refresh data dan tampilkan notifikasi.
+        await widget.onSuccess();
 
-          ScaffoldMessenger.of(widget.pageContext).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Penyesuaian stok berhasil disimpan!',
-              ),
-              backgroundColor: Colors.green,
-            ),
-          );
+        if (widget.products.isNotEmpty) {
+          // Tidak ada operasi tambahan.
         }
+
+        // Gunakan messenger sebelum modal ditutup melalui root navigator
+        // dengan menyimpan messenger pada saat proses berlangsung.
+        // Notifikasi ditampilkan dari halaman melalui callback.
       } else {
         setState(() {
           isSaving = false;
         });
 
-        final error =
-            widget.adjustmentStore.errorMessage ??
-                'Gagal menyimpan penyesuaian stok.';
+        final error = widget.adjustmentStore.errorMessage;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error),
-            backgroundColor: Colors.red,
-          ),
+        _showError(
+          error?.isNotEmpty == true
+              ? error!
+              : 'Gagal menyimpan penyesuaian stok.',
         );
       }
     } catch (e) {
@@ -399,14 +523,26 @@ class _AddAdjustmentSheetState
         isSaving = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Terjadi kesalahan: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showError('Terjadi kesalahan saat menyimpan: $e');
     }
   }
+
+  void _showError(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+  }
+
+  // ==========================================================
+  // BUILD FORM
+  // ==========================================================
 
   @override
   Widget build(BuildContext context) {
@@ -424,7 +560,7 @@ class _AddAdjustmentSheetState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header
+              // HEADER
               Row(
                 children: [
                   Container(
@@ -451,12 +587,18 @@ class _AddAdjustmentSheetState
                       ),
                     ),
                   ),
+                  IconButton(
+                    onPressed: isSaving
+                        ? null
+                        : () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
                 ],
               ),
 
               const SizedBox(height: 24),
 
-              // Dropdown Produk
+              // PILIH PRODUK
               DropdownButtonFormField<int>(
                 initialValue: selectedProductId,
                 isExpanded: true,
@@ -473,7 +615,7 @@ class _AddAdjustmentSheetState
                   return DropdownMenuItem<int>(
                     value: product.productId,
                     child: Text(
-                      '${product.productName} (Stok: ${product.stockQuantity})',
+                      '${product.productName} (Stok: ${widget.formatStock(product.stockQuantity)})',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -498,7 +640,7 @@ class _AddAdjustmentSheetState
 
               const SizedBox(height: 16),
 
-              // Dropdown Tipe
+              // TIPE PENYESUAIAN
               DropdownButtonFormField<String>(
                 initialValue: selectedType,
                 isExpanded: true,
@@ -550,13 +692,17 @@ class _AddAdjustmentSheetState
 
               const SizedBox(height: 16),
 
-              // Kuantitas
+              // JUMLAH STOK
               TextFormField(
                 controller: _qtyController,
                 enabled: !isSaving,
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  StockThousandsInputFormatter(),
+                ],
                 decoration: InputDecoration(
                   labelText: 'Jumlah Kuantitas',
+                  hintText: 'Contoh: 1.000',
                   prefixIcon: const Icon(
                     Icons.numbers_rounded,
                   ),
@@ -565,11 +711,13 @@ class _AddAdjustmentSheetState
                   ),
                 ),
                 validator: (value) {
-                  final quantity = int.tryParse(
-                    value?.trim() ?? '',
-                  );
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Jumlah stok wajib diisi';
+                  }
 
-                  if (quantity == null || quantity <= 0) {
+                  final quantity = _parseQuantity(value);
+
+                  if (quantity <= 0) {
                     return 'Masukkan jumlah yang valid (> 0)';
                   }
 
@@ -579,13 +727,14 @@ class _AddAdjustmentSheetState
 
               const SizedBox(height: 16),
 
-              // Alasan
+              // ALASAN
               TextFormField(
                 controller: _reasonController,
                 enabled: !isSaving,
                 maxLines: 2,
                 decoration: InputDecoration(
                   labelText: 'Alasan / Keterangan',
+                  hintText: 'Contoh: Pembelian barang dari supplier',
                   prefixIcon: const Icon(
                     Icons.description_outlined,
                   ),
@@ -604,7 +753,7 @@ class _AddAdjustmentSheetState
 
               const SizedBox(height: 24),
 
-              // Tombol Simpan
+              // TOMBOL SIMPAN
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
