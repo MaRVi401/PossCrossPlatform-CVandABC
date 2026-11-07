@@ -1,4 +1,3 @@
-// ignore_for_file: library_private_types_in_public_api
 
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -17,7 +16,8 @@ class CategoryScreen extends StatefulWidget {
 
 class _CategoryScreenState extends State<CategoryScreen> {
   final CategoryStore _categoryStore = sl<CategoryStore>();
-  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController =
+      TextEditingController();
 
   static const Color _primaryColor = Color(0xFF1E1B4B);
   static const Color _backgroundColor = Color(0xFFF8FAFC);
@@ -25,8 +25,11 @@ class _CategoryScreenState extends State<CategoryScreen> {
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadCategories();
+      if (mounted) {
+        _loadCategories();
+      }
     });
   }
 
@@ -61,10 +64,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }
 
   // ==========================================================
-  // LOAD CATEGORY
+  // LOAD CATEGORIES
   // ==========================================================
 
   Future<void> _loadCategories() async {
+    if (!mounted) return;
+
     try {
       await _categoryStore.fetchCategories();
     } catch (e) {
@@ -78,236 +83,39 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }
 
   // ==========================================================
-  // ADD / EDIT CATEGORY
+  // ADD / EDIT FORM
   // ==========================================================
 
   Future<void> _showFormModal({
     CategoryModel? category,
   }) async {
-    final bool isEdit = category != null;
+    final isEdit = category != null;
 
-    final nameController = TextEditingController(
-      text: category?.categoryName ?? '',
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) {
+        return _CategoryFormSheet(
+          category: category,
+          categoryStore: _categoryStore,
+          primaryColor: _primaryColor,
+        );
+      },
     );
 
-    final descController = TextEditingController(
-      text: category?.description ?? '',
-    );
+    // Modal sudah selesai ditutup sebelum melakukan refresh.
+    if (result == true && mounted) {
+      await _loadCategories();
 
-    final formKey = GlobalKey<FormState>();
+      if (!mounted) return;
 
-    try {
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        backgroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(24),
-          ),
-        ),
-        builder: (modalContext) {
-          return Padding(
-            padding: EdgeInsets.only(
-              top: 24,
-              left: 24,
-              right: 24,
-              bottom: MediaQuery.of(modalContext).viewInsets.bottom + 24,
-            ),
-            child: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(9),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEEF2FF),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            isEdit
-                                ? Icons.edit_outlined
-                                : Icons.add_circle_outline,
-                            color: _primaryColor,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            isEdit ? 'Edit Kategori' : 'Kategori Baru',
-                            style: const TextStyle(
-                              fontSize: 19,
-                              fontWeight: FontWeight.bold,
-                              color: _primaryColor,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            Navigator.of(modalContext).pop();
-                          },
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    TextFormField(
-                      controller: nameController,
-                      textCapitalization: TextCapitalization.words,
-                      maxLength: 100,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Nama kategori wajib diisi';
-                        }
-                        return null;
-                      },
-                      decoration: InputDecoration(
-                        labelText: 'Nama Kategori',
-                        hintText: 'Misal: Makanan, Minuman, Elektronik',
-                        prefixIcon: const Icon(Icons.category_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: descController,
-                      textCapitalization: TextCapitalization.sentences,
-                      maxLines: 3,
-                      maxLength: 255,
-                      decoration: InputDecoration(
-                        labelText: 'Deskripsi (Opsional)',
-                        hintText: 'Masukkan deskripsi kategori',
-                        prefixIcon: const Icon(Icons.description_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    Observer(
-                      builder: (_) {
-                        final isLoading = _categoryStore.isLoading;
-
-                        return SizedBox(
-                          height: 50,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _primaryColor,
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor:
-                                  _primaryColor.withValues(alpha: 0.5),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: isLoading
-                                ? null
-                                : () async {
-                                    if (!formKey.currentState!.validate()) {
-                                      return;
-                                    }
-
-                                    final name = nameController.text.trim();
-                                    final description =
-                                        descController.text.trim();
-
-                                    bool success = false;
-
-                                    try {
-                                      if (isEdit) {
-                                        success = await _categoryStore
-                                            .updateCategory(
-                                          category.categoryId,
-                                          name,
-                                          description,
-                                        );
-                                      } else {
-                                        success = await _categoryStore
-                                            .addCategory(
-                                          name,
-                                          description,
-                                        );
-                                      }
-                                    } catch (e) {
-                                      if (mounted) {
-                                        _showMessage(
-                                          'Terjadi kesalahan: $e',
-                                          isError: true,
-                                        );
-                                      }
-                                      return;
-                                    }
-
-                                    if (!mounted || !modalContext.mounted) {
-                                      return;
-                                    }
-
-                                    if (success) {
-                                      Navigator.of(modalContext).pop();
-
-                                      await _loadCategories();
-
-                                      if (!mounted) return;
-
-                                      _showMessage(
-                                        isEdit
-                                            ? 'Kategori berhasil diperbarui!'
-                                            : 'Kategori berhasil ditambahkan!',
-                                      );
-                                    } else {
-                                      _showMessage(
-                                        _categoryStore.errorMessage ??
-                                            'Gagal menyimpan kategori',
-                                        isError: true,
-                                      );
-                                    }
-                                  },
-                            child: isLoading
-                                ? const SizedBox(
-                                    height: 22,
-                                    width: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Text(
-                                    isEdit
-                                        ? 'Simpan Perubahan'
-                                        : 'Tambah Kategori',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+      _showMessage(
+        isEdit
+            ? 'Kategori berhasil diperbarui!'
+            : 'Kategori berhasil ditambahkan!',
       );
-    } finally {
-      nameController.dispose();
-      descController.dispose();
     }
   }
 
@@ -316,7 +124,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
   // ==========================================================
 
   Future<void> _confirmDelete(CategoryModel category) async {
-    final bool? confirmed = await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
@@ -341,7 +149,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
             ],
           ),
           content: Text(
-            'Apakah Anda yakin ingin menghapus kategori "${category.categoryName}"?',
+            'Apakah Anda yakin ingin menghapus kategori '
+            '"${category.categoryName}"?',
           ),
           actions: [
             TextButton(
@@ -382,7 +191,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
         _showMessage('Kategori berhasil dihapus!');
       } else {
         _showMessage(
-          _categoryStore.errorMessage ?? 'Gagal menghapus kategori',
+          _categoryStore.errorMessage ??
+              'Gagal menghapus kategori',
           isError: true,
         );
       }
@@ -402,7 +212,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
   Widget _buildCategoryCard(CategoryModel category) {
     final name = category.categoryName.trim();
-    final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
+
+    final initial = name.isNotEmpty
+        ? name.substring(0, 1).toUpperCase()
+        : '?';
 
     return Card(
       elevation: 2,
@@ -560,7 +373,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
           110,
         ),
         itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        separatorBuilder: (_, __) =>
+            const SizedBox(height: 10),
         itemBuilder: (context, index) {
           return _buildCategoryCard(categories[index]);
         },
@@ -612,23 +426,23 @@ class _CategoryScreenState extends State<CategoryScreen> {
           ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButtonLocation:
+          FloatingActionButtonLocation.endFloat,
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
             child: Observer(
               builder: (_) {
+                final query = _categoryStore.searchQuery;
+
                 return TextField(
                   controller: _searchController,
-                  onChanged: (value) {
-                    // Panggil fungsi store MobX tanpa setState()!
-                    _categoryStore.setSearchQuery(value);
-                  },
+                  onChanged: _categoryStore.setSearchQuery,
                   decoration: InputDecoration(
                     hintText: 'Cari kategori...',
                     prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _categoryStore.searchQuery.isNotEmpty
+                    suffixIcon: query.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear),
                             onPressed: () {
@@ -654,9 +468,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
           Expanded(
             child: Observer(
               builder: (_) {
-                final categories = _categoryStore.filteredCategories;
+                final categories =
+                    _categoryStore.filteredCategories;
 
-                if (_categoryStore.isLoading && categories.isEmpty) {
+                final isLoading = _categoryStore.isLoading;
+
+                if (isLoading && categories.isEmpty) {
                   return const Center(
                     child: CircularProgressIndicator(
                       color: _primaryColor,
@@ -673,6 +490,290 @@ class _CategoryScreenState extends State<CategoryScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// CATEGORY FORM - SEPARATE STATEFUL WIDGET
+// ============================================================
+
+class _CategoryFormSheet extends StatefulWidget {
+  final CategoryModel? category;
+  final CategoryStore categoryStore;
+  final Color primaryColor;
+
+  const _CategoryFormSheet({
+    this.category,
+    required this.categoryStore,
+    required this.primaryColor,
+  });
+
+  @override
+  State<_CategoryFormSheet> createState() =>
+      _CategoryFormSheetState();
+}
+
+class _CategoryFormSheetState
+    extends State<_CategoryFormSheet> {
+  final _formKey = GlobalKey<FormState>();
+
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+
+  bool _submitting = false;
+
+  bool get isEdit => widget.category != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _nameController = TextEditingController(
+      text: widget.category?.categoryName ?? '',
+    );
+
+    _descriptionController = TextEditingController(
+      text: widget.category?.description ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  // ==========================================================
+  // SAVE CATEGORY
+  // ==========================================================
+
+  Future<void> _saveCategory() async {
+    if (_submitting) return;
+
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+    });
+
+    final name = _nameController.text.trim();
+
+    final description = _descriptionController.text.trim();
+
+    try {
+      final bool success;
+
+      if (isEdit) {
+        success = await widget.categoryStore.updateCategory(
+          widget.category!.categoryId,
+          name,
+          description.isEmpty ? null : description,
+        );
+      } else {
+        success = await widget.categoryStore.addCategory(
+          name,
+          description.isEmpty ? null : description,
+        );
+      }
+
+      if (!mounted) return;
+
+      if (success) {
+        Navigator.of(context).pop(true);
+      } else {
+        setState(() {
+          _submitting = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.categoryStore.errorMessage ??
+                  'Gagal menyimpan kategori',
+            ),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _submitting = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  // ==========================================================
+  // BUILD FORM
+  // ==========================================================
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(
+          top: 24,
+          left: 24,
+          right: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // HEADER
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        isEdit
+                            ? Icons.edit_outlined
+                            : Icons.add_circle_outline,
+                        color: widget.primaryColor,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        isEdit
+                            ? 'Edit Kategori'
+                            : 'Kategori Baru',
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                          color: widget.primaryColor,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _submitting
+                          ? null
+                          : () {
+                              Navigator.of(context).pop(false);
+                            },
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // CATEGORY NAME
+                TextFormField(
+                  controller: _nameController,
+                  enabled: !_submitting,
+                  textCapitalization: TextCapitalization.words,
+                  maxLength: 100,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Nama kategori wajib diisi';
+                    }
+
+                    return null;
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Nama Kategori',
+                    hintText:
+                        'Misal: Makanan, Minuman, Elektronik',
+                    prefixIcon:
+                        const Icon(Icons.category_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // DESCRIPTION
+                TextFormField(
+                  controller: _descriptionController,
+                  enabled: !_submitting,
+                  textCapitalization:
+                      TextCapitalization.sentences,
+                  maxLines: 3,
+                  maxLength: 255,
+                  decoration: InputDecoration(
+                    labelText: 'Deskripsi (Opsional)',
+                    hintText: 'Masukkan deskripsi kategori',
+                    prefixIcon:
+                        const Icon(Icons.description_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // SAVE BUTTON
+                SizedBox(
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: widget.primaryColor,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor:
+                          widget.primaryColor.withValues(alpha: 0.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed:
+                        _submitting ? null : _saveCategory,
+                    child: _submitting
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            isEdit
+                                ? 'Simpan Perubahan'
+                                : 'Tambah Kategori',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
