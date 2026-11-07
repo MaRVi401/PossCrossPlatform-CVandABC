@@ -1,3 +1,4 @@
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -34,7 +35,6 @@ class RupiahInputFormatter extends TextInputFormatter {
     }
 
     final number = int.tryParse(digits);
-
     if (number == null) return oldValue;
 
     final formatted = CurrencyFormatter.format(number);
@@ -66,7 +66,6 @@ class ThousandsInputFormatter extends TextInputFormatter {
     }
 
     final number = int.tryParse(digits);
-
     if (number == null) return oldValue;
 
     final formatted = NumberFormat.decimalPattern('id_ID').format(number);
@@ -99,6 +98,7 @@ class _ProductScreenState extends State<ProductScreen> {
   @override
   void initState() {
     super.initState();
+
     _productStore.fetchProducts();
     _categoryStore.fetchCategories();
   }
@@ -110,18 +110,8 @@ class _ProductScreenState extends State<ProductScreen> {
   }
 
   // ==========================================================
-  // KONVERSI INPUT MENJADI ANGKA
+  // FORMAT ANGKA
   // ==========================================================
-
-  double _parseRupiah(String value) {
-    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
-    return double.tryParse(digits) ?? 0;
-  }
-
-  int _parseStock(String value) {
-    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
-    return int.tryParse(digits) ?? 0;
-  }
 
   String _formatStock(int value) {
     return NumberFormat.decimalPattern('id_ID').format(value);
@@ -152,7 +142,8 @@ class _ProductScreenState extends State<ProductScreen> {
       return null;
     }
 
-    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+    if (rawUrl.startsWith('http://') ||
+        rawUrl.startsWith('https://')) {
       return rawUrl;
     }
 
@@ -172,540 +163,49 @@ class _ProductScreenState extends State<ProductScreen> {
   }
 
   // ==========================================================
-  // FORM TAMBAH DAN EDIT PRODUK
+  // MODAL TAMBAH DAN EDIT PRODUK
   // ==========================================================
 
-  void _showFormModal({ProductModel? product}) {
-    final isEdit = product != null;
-
-    final skuController = TextEditingController(
-      text: product?.sku ?? '',
-    );
-
-    final nameController = TextEditingController(
-      text: product?.productName ?? '',
-    );
-
-    final buyPriceController = TextEditingController(
-      text: product == null ? '' : CurrencyFormatter.format(product.buyPrice),
-    );
-
-    final sellPriceController = TextEditingController(
-      text: product == null ? '' : CurrencyFormatter.format(product.sellPrice),
-    );
-
-    final stockController = TextEditingController(
-      text: product == null ? '0' : _formatStock(product.stockQuantity),
-    );
-
-    int? selectedCategoryId = product?.categoryId ??
-        (_categoryStore.categories.isNotEmpty
-            ? _categoryStore.categories.first.categoryId
-            : null);
-
-    File? selectedImage;
-
-    final formKey = GlobalKey<FormState>();
-
-    showModalBottomSheet(
+  Future<void> _showFormModal({ProductModel? product}) async {
+    final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.white,
+      isDismissible: true,
+      enableDrag: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(24),
         ),
       ),
-      builder: (modalContext) {
-        return StatefulBuilder(
-          builder: (modalContext, setStateModal) {
-            final existingImageUrl = _resolveImageUrl(product?.imageUrl);
-
-            return Padding(
-              padding: EdgeInsets.only(
-                top: 24,
-                left: 24,
-                right: 24,
-                bottom: MediaQuery.of(modalContext).viewInsets.bottom + 24,
-              ),
-              child: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // HEADER
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEEF2FF),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              isEdit
-                                  ? Icons.edit_outlined
-                                  : Icons.add_box_outlined,
-                              color: const Color(0xFF1E1B4B),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              isEdit
-                                  ? 'Edit Data Produk'
-                                  : 'Tambah Produk Baru',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E1B4B),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(modalContext),
-                            icon: const Icon(Icons.close),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // FOTO PRODUK
-                      Center(
-                        child: Stack(
-                          children: [
-                            InkWell(
-                              onTap: () async {
-                                try {
-                                  final picker = ImagePicker();
-
-                                  final pickedFile = await picker.pickImage(
-                                    source: ImageSource.gallery,
-                                    imageQuality: 85,
-                                  );
-
-                                  if (pickedFile != null &&
-                                      modalContext.mounted) {
-                                    setStateModal(() {
-                                      selectedImage = File(pickedFile.path);
-                                    });
-                                  }
-                                } catch (e) {
-                                  _showMessage(
-                                    'Gagal memilih gambar: $e',
-                                    isError: true,
-                                  );
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(16),
-                              child: Container(
-                                height: 110,
-                                width: 110,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color:
-                                        const Color(0xFF1E1B4B).withAlpha(70),
-                                    width: 1.5,
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(15),
-                                  child: selectedImage != null
-                                      ? Image.file(
-                                          selectedImage!,
-                                          fit: BoxFit.cover,
-                                        )
-                                      : existingImageUrl != null
-                                          ? Image.network(
-                                              existingImageUrl,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) =>
-                                                  const Icon(
-                                                Icons.broken_image,
-                                                size: 30,
-                                                color: Colors.grey,
-                                              ),
-                                            )
-                                          : const Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.add_a_photo_outlined,
-                                                  size: 30,
-                                                  color: Color(0xFF1E1B4B),
-                                                ),
-                                                SizedBox(height: 6),
-                                                Text(
-                                                  'Upload Foto',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                ),
-                              ),
-                            ),
-                            if (selectedImage != null)
-                              Positioned(
-                                top: 4,
-                                right: 4,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setStateModal(() {
-                                      selectedImage = null;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      size: 14,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // KATEGORI
-                      DropdownButtonFormField<int>(
-                        initialValue: selectedCategoryId,
-                        isExpanded: true,
-                        decoration: InputDecoration(
-                          labelText: 'Kategori Produk',
-                          prefixIcon: const Icon(Icons.category_outlined),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        items: _categoryStore.categories.map((category) {
-                          return DropdownMenuItem<int>(
-                            value: category.categoryId,
-                            child: Text(
-                              category.categoryName,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setStateModal(() {
-                            selectedCategoryId = value;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null) {
-                            return 'Pilih kategori terlebih dahulu';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // SKU DAN NAMA
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: skuController,
-                              decoration: InputDecoration(
-                                labelText: 'SKU / Kode',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'SKU wajib diisi';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 2,
-                            child: TextFormField(
-                              controller: nameController,
-                              decoration: InputDecoration(
-                                labelText: 'Nama Produk',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Nama wajib diisi';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // HARGA BELI DAN JUAL
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: buyPriceController,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                RupiahInputFormatter(),
-                              ],
-                              decoration: InputDecoration(
-                                labelText: 'Harga Beli',
-                                prefixIcon: const Icon(
-                                  Icons.payments_outlined,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Harga wajib diisi';
-                                }
-                                if (_parseRupiah(value) <= 0) {
-                                  return 'Harga tidak valid';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: sellPriceController,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                RupiahInputFormatter(),
-                              ],
-                              decoration: InputDecoration(
-                                labelText: 'Harga Jual',
-                                prefixIcon: const Icon(
-                                  Icons.payments_outlined,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Harga wajib diisi';
-                                }
-                                if (_parseRupiah(value) <= 0) {
-                                  return 'Harga tidak valid';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // STOK
-                      TextFormField(
-                        controller: stockController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          ThousandsInputFormatter(),
-                        ],
-                        decoration: InputDecoration(
-                          labelText: 'Jumlah Stok Tersedia',
-                          prefixIcon: const Icon(
-                            Icons.inventory_outlined,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Stok wajib diisi';
-                          }
-
-                          final stock = _parseStock(value);
-
-                          if (stock < 0) {
-                            return 'Stok tidak valid';
-                          }
-
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // TOMBOL SIMPAN
-                      Observer(
-                        builder: (_) {
-                          final isLoading = _productStore.isLoading;
-
-                          return SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1E1B4B),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              onPressed: isLoading
-                                  ? null
-                                  : () async {
-                                      if (!formKey.currentState!.validate()) {
-                                        return;
-                                      }
-
-                                      if (selectedCategoryId == null) {
-                                        _showMessage(
-                                          'Kategori belum dipilih',
-                                          isError: true,
-                                        );
-                                        return;
-                                      }
-
-                                      // Konversi semua input ke angka murni.
-                                      final double buyPrice = _parseRupiah(
-                                        buyPriceController.text,
-                                      );
-
-                                      final double sellPrice = _parseRupiah(
-                                        sellPriceController.text,
-                                      );
-
-                                      final int stockQuantity = _parseStock(
-                                        stockController.text,
-                                      );
-
-                                      try {
-                                        final bool success;
-
-                                        if (isEdit) {
-                                          success =
-                                              await _productStore.updateProduct(
-                                            productId: product.productId,
-                                            categoryId: selectedCategoryId!,
-                                            sku: skuController.text.trim(),
-                                            productName:
-                                                nameController.text.trim(),
-                                            buyPrice: buyPrice,
-                                            sellPrice: sellPrice,
-                                            stockQuantity: stockQuantity,
-                                            imageFile: selectedImage,
-                                          );
-                                        } else {
-                                          success =
-                                              await _productStore.addProduct(
-                                            categoryId: selectedCategoryId!,
-                                            sku: skuController.text.trim(),
-                                            productName:
-                                                nameController.text.trim(),
-                                            buyPrice: buyPrice,
-                                            sellPrice: sellPrice,
-                                            stockQuantity: stockQuantity,
-                                            imageFile: selectedImage,
-                                          );
-                                        }
-
-                                        if (!mounted || !modalContext.mounted) {
-                                          return;
-                                        }
-
-                                        if (success) {
-                                          Navigator.pop(modalContext);
-
-                                          _showMessage(
-                                            isEdit
-                                                ? 'Produk berhasil diperbarui!'
-                                                : 'Produk berhasil ditambahkan!',
-                                          );
-                                        } else {
-                                          final error =
-                                              _productStore.errorMessage;
-
-                                          _showMessage(
-                                            error?.isNotEmpty == true
-                                                ? error!
-                                                : 'Gagal menyimpan produk. Periksa data dan koneksi server.',
-                                            isError: true,
-                                          );
-                                        }
-                                      } catch (e) {
-                                        _showMessage(
-                                          'Terjadi kesalahan saat menyimpan produk: $e',
-                                          isError: true,
-                                        );
-                                      }
-                                    },
-                              child: isLoading
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      isEdit
-                                          ? 'Simpan Perubahan'
-                                          : 'Tambah Produk',
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
+      builder: (_) {
+        return _ProductFormSheet(
+          productStore: _productStore,
+          categoryStore: _categoryStore,
+          product: product,
+          existingImageUrl: _resolveImageUrl(product?.imageUrl),
         );
       },
-    ).whenComplete(() {
-      skuController.dispose();
-      nameController.dispose();
-      buyPriceController.dispose();
-      sellPriceController.dispose();
-      stockController.dispose();
-    });
+    );
+
+    if (!mounted) return;
+
+    if (result == true) {
+      _showMessage(
+        product == null
+            ? 'Produk berhasil ditambahkan!'
+            : 'Produk berhasil diperbarui!',
+      );
+    }
   }
 
   // ==========================================================
   // HAPUS PRODUK
   // ==========================================================
 
-  void _confirmDelete(ProductModel product) {
-    showDialog(
+  Future<void> _confirmDelete(ProductModel product) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
@@ -723,11 +223,14 @@ class _ProductScreenState extends State<ProductScreen> {
             ],
           ),
           content: Text(
-            'Apakah kamu yakin ingin menghapus produk "${product.productName}"?',
+            'Apakah kamu yakin ingin menghapus produk '
+            '"${product.productName}"?',
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
               child: const Text('Batal'),
             ),
             ElevatedButton(
@@ -735,30 +238,8 @@ class _ProductScreenState extends State<ProductScreen> {
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              onPressed: () async {
-                Navigator.pop(dialogContext);
-
-                try {
-                  final success = await _productStore.deleteProduct(
-                    product.productId,
-                  );
-
-                  if (!mounted) return;
-
-                  if (success) {
-                    _showMessage('Produk berhasil dihapus');
-                  } else {
-                    _showMessage(
-                      _productStore.errorMessage ?? 'Gagal menghapus produk',
-                      isError: true,
-                    );
-                  }
-                } catch (e) {
-                  _showMessage(
-                    'Gagal menghapus produk: $e',
-                    isError: true,
-                  );
-                }
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
               },
               child: const Text('Hapus'),
             ),
@@ -766,6 +247,32 @@ class _ProductScreenState extends State<ProductScreen> {
         );
       },
     );
+
+    if (!mounted || confirmed != true) return;
+
+    try {
+      final success = await _productStore.deleteProduct(
+        product.productId,
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        _showMessage('Produk berhasil dihapus!');
+      } else {
+        _showMessage(
+          _productStore.errorMessage ?? 'Gagal menghapus produk',
+          isError: true,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      _showMessage(
+        'Gagal menghapus produk: $e',
+        isError: true,
+      );
+    }
   }
 
   // ==========================================================
@@ -776,12 +283,14 @@ class _ProductScreenState extends State<ProductScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+
       appBar: AppBar(
         title: const Text(
           'Manajemen Produk',
           style: TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.bold),
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: const Color(0xFF1E1B4B),
         foregroundColor: Colors.white,
@@ -797,9 +306,11 @@ class _ProductScreenState extends State<ProductScreen> {
           ),
         ],
       ),
+
       drawer: const MainDrawer(
         currentRoute: 'product',
       ),
+
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showFormModal(),
         backgroundColor: const Color(0xFF1E1B4B),
@@ -807,9 +318,13 @@ class _ProductScreenState extends State<ProductScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Tambah Produk'),
       ),
+
       body: Column(
         children: [
+          // ==================================================
           // PENCARIAN
+          // ==================================================
+
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
@@ -826,7 +341,10 @@ class _ProductScreenState extends State<ProductScreen> {
                 ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        icon: const Icon(
+                          Icons.clear,
+                          color: Colors.grey,
+                        ),
                         onPressed: () {
                           _searchController.clear();
                           _productStore.setSearchQuery('');
@@ -848,11 +366,15 @@ class _ProductScreenState extends State<ProductScreen> {
             ),
           ),
 
+          // ==================================================
           // DAFTAR PRODUK
+          // ==================================================
+
           Expanded(
             child: Observer(
               builder: (_) {
-                if (_productStore.isLoading && _productStore.products.isEmpty) {
+                if (_productStore.isLoading &&
+                    _productStore.products.isEmpty) {
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -899,13 +421,17 @@ class _ProductScreenState extends State<ProductScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
                     itemCount: _productStore.filteredProducts.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: 10),
                     itemBuilder: (context, index) {
-                      final product = _productStore.filteredProducts[index];
+                      final product =
+                          _productStore.filteredProducts[index];
 
-                      final imageUrl = _resolveImageUrl(product.imageUrl);
+                      final imageUrl =
+                          _resolveImageUrl(product.imageUrl);
 
-                      final isLowStock = product.stockQuantity < 5;
+                      final isLowStock =
+                          product.stockQuantity < 5;
 
                       return Container(
                         decoration: BoxDecoration(
@@ -924,14 +450,18 @@ class _ProductScreenState extends State<ProductScreen> {
                           borderRadius: BorderRadius.circular(16),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(16),
-                            onTap: () => _showFormModal(product: product),
+                            onTap: () {
+                              _showFormModal(product: product);
+                            },
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Row(
                                 children: [
-                                  // FOTO
+                                  // FOTO PRODUK
+
                                   ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius:
+                                        BorderRadius.circular(12),
                                     child: imageUrl != null
                                         ? Image.network(
                                             imageUrl,
@@ -948,6 +478,7 @@ class _ProductScreenState extends State<ProductScreen> {
                                   const SizedBox(width: 14),
 
                                   // DETAIL PRODUK
+
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -962,9 +493,12 @@ class _ProductScreenState extends State<ProductScreen> {
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
+
                                         const SizedBox(height: 2),
+
                                         Text(
-                                          'SKU: ${product.sku} • ${product.categoryName ?? 'Tanpa Kategori'}',
+                                          'SKU: ${product.sku} • '
+                                          '${product.categoryName ?? 'Tanpa Kategori'}',
                                           style: TextStyle(
                                             color: Colors.grey.shade600,
                                             fontSize: 12,
@@ -972,7 +506,9 @@ class _ProductScreenState extends State<ProductScreen> {
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
+
                                         const SizedBox(height: 6),
+
                                         Wrap(
                                           spacing: 8,
                                           runSpacing: 4,
@@ -989,6 +525,7 @@ class _ProductScreenState extends State<ProductScreen> {
                                                 fontSize: 14,
                                               ),
                                             ),
+
                                             Container(
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -1019,7 +556,8 @@ class _ProductScreenState extends State<ProductScreen> {
                                     ),
                                   ),
 
-                                  // TOMBOL EDIT DAN HAPUS
+                                  // TOMBOL EDIT
+
                                   IconButton(
                                     icon: const Icon(
                                       Icons.edit_outlined,
@@ -1030,6 +568,9 @@ class _ProductScreenState extends State<ProductScreen> {
                                       _showFormModal(product: product);
                                     },
                                   ),
+
+                                  // TOMBOL HAPUS
+
                                   IconButton(
                                     icon: const Icon(
                                       Icons.delete_outline,
@@ -1057,6 +598,10 @@ class _ProductScreenState extends State<ProductScreen> {
     );
   }
 
+  // ==========================================================
+  // PLACEHOLDER FOTO
+  // ==========================================================
+
   Widget _imagePlaceholder() {
     return Container(
       width: 68,
@@ -1066,6 +611,632 @@ class _ProductScreenState extends State<ProductScreen> {
         Icons.inventory_2_outlined,
         color: Color(0xFF1E1B4B),
         size: 32,
+      ),
+    );
+  }
+}
+
+// ============================================================
+// FORM PRODUK - STATEFUL WIDGET TERPISAH
+// ============================================================
+
+class _ProductFormSheet extends StatefulWidget {
+  final ProductStore productStore;
+  final CategoryStore categoryStore;
+  final ProductModel? product;
+  final String? existingImageUrl;
+
+  const _ProductFormSheet({
+    required this.productStore,
+    required this.categoryStore,
+    this.product,
+    this.existingImageUrl,
+  });
+
+  @override
+  State<_ProductFormSheet> createState() =>
+      _ProductFormSheetState();
+}
+
+class _ProductFormSheetState extends State<_ProductFormSheet> {
+  final _formKey = GlobalKey<FormState>();
+
+  late final TextEditingController _skuController;
+  late final TextEditingController _nameController;
+  late final TextEditingController _buyPriceController;
+  late final TextEditingController _sellPriceController;
+  late final TextEditingController _stockController;
+
+  int? _selectedCategoryId;
+  File? _selectedImage;
+
+  bool _isSaving = false;
+
+  bool get _isEdit => widget.product != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final product = widget.product;
+
+    _skuController = TextEditingController(
+      text: product?.sku ?? '',
+    );
+
+    _nameController = TextEditingController(
+      text: product?.productName ?? '',
+    );
+
+    _buyPriceController = TextEditingController(
+      text: product == null
+          ? ''
+          : CurrencyFormatter.format(product.buyPrice),
+    );
+
+    _sellPriceController = TextEditingController(
+      text: product == null
+          ? ''
+          : CurrencyFormatter.format(product.sellPrice),
+    );
+
+    _stockController = TextEditingController(
+      text: product == null
+          ? '0'
+          : _formatStock(product.stockQuantity),
+    );
+
+    final categories = widget.categoryStore.categories.toList();
+
+    final categoryIds = categories
+        .map((category) => category.categoryId)
+        .toList();
+
+    if (product != null &&
+        categoryIds.contains(product.categoryId)) {
+      _selectedCategoryId = product.categoryId;
+    } else if (categories.isNotEmpty) {
+      _selectedCategoryId = categories.first.categoryId;
+    }
+  }
+
+  @override
+  void dispose() {
+    _skuController.dispose();
+    _nameController.dispose();
+    _buyPriceController.dispose();
+    _sellPriceController.dispose();
+    _stockController.dispose();
+
+    super.dispose();
+  }
+
+  // ==========================================================
+  // FORMAT DAN PARSE ANGKA
+  // ==========================================================
+
+  double _parseRupiah(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    return double.tryParse(digits) ?? 0;
+  }
+
+  int _parseStock(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    return int.tryParse(digits) ?? 0;
+  }
+
+  String _formatStock(int value) {
+    return NumberFormat.decimalPattern('id_ID').format(value);
+  }
+
+  // ==========================================================
+  // PILIH FOTO
+  // ==========================================================
+
+  Future<void> _pickImage() async {
+    try {
+      final picker = ImagePicker();
+
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+
+      if (!mounted || pickedFile == null) return;
+
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      _showError('Gagal memilih gambar: $e');
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+  }
+
+  // ==========================================================
+  // SIMPAN PRODUK
+  // ==========================================================
+
+  Future<void> _saveProduct() async {
+    if (_isSaving) return;
+
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_selectedCategoryId == null) {
+      _showError('Kategori belum dipilih');
+      return;
+    }
+
+    final buyPrice = _parseRupiah(_buyPriceController.text);
+    final sellPrice = _parseRupiah(_sellPriceController.text);
+    final stockQuantity = _parseStock(_stockController.text);
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final bool success;
+
+      if (_isEdit) {
+        success = await widget.productStore.updateProduct(
+          productId: widget.product!.productId,
+          categoryId: _selectedCategoryId!,
+          sku: _skuController.text.trim(),
+          productName: _nameController.text.trim(),
+          buyPrice: buyPrice,
+          sellPrice: sellPrice,
+          stockQuantity: stockQuantity,
+          imageFile: _selectedImage,
+        );
+      } else {
+        success = await widget.productStore.addProduct(
+          categoryId: _selectedCategoryId!,
+          sku: _skuController.text.trim(),
+          productName: _nameController.text.trim(),
+          buyPrice: buyPrice,
+          sellPrice: sellPrice,
+          stockQuantity: stockQuantity,
+          imageFile: _selectedImage,
+        );
+      }
+
+      if (!mounted) return;
+
+      if (success) {
+        // Mengembalikan hasil ke halaman ProductScreen.
+        // Controller akan dibuang melalui dispose().
+        Navigator.of(context).pop(true);
+      } else {
+        final error = widget.productStore.errorMessage;
+
+        _showError(
+          error?.isNotEmpty == true
+              ? error!
+              : 'Gagal menyimpan produk. Periksa data dan koneksi server.',
+        );
+
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      _showError('Terjadi kesalahan saat menyimpan produk: $e');
+
+      setState(() {
+        _isSaving = false;
+      });
+    }
+  }
+
+  // ==========================================================
+  // BUILD FORM
+  // ==========================================================
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = widget.categoryStore.categories.toList();
+
+    return Padding(
+      padding: EdgeInsets.only(
+        top: 24,
+        left: 24,
+        right: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // HEADER
+
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      _isEdit
+                          ? Icons.edit_outlined
+                          : Icons.add_box_outlined,
+                      color: const Color(0xFF1E1B4B),
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    child: Text(
+                      _isEdit
+                          ? 'Edit Data Produk'
+                          : 'Tambah Produk Baru',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E1B4B),
+                      ),
+                    ),
+                  ),
+
+                  IconButton(
+                    onPressed: _isSaving
+                        ? null
+                        : () => Navigator.of(context).pop(false),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // FOTO PRODUK
+
+              Center(
+                child: Stack(
+                  children: [
+                    InkWell(
+                      onTap: _isSaving ? null : _pickImage,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        height: 110,
+                        width: 110,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFF1E1B4B).withAlpha(70),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(15),
+                          child: _selectedImage != null
+                              ? Image.file(
+                                  _selectedImage!,
+                                  fit: BoxFit.cover,
+                                )
+                              : widget.existingImageUrl != null
+                                  ? Image.network(
+                                      widget.existingImageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) {
+                                        return const Icon(
+                                          Icons.broken_image,
+                                          size: 30,
+                                          color: Colors.grey,
+                                        );
+                                      },
+                                    )
+                                  : const Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.add_a_photo_outlined,
+                                          size: 30,
+                                          color: Color(0xFF1E1B4B),
+                                        ),
+                                        SizedBox(height: 6),
+                                        Text(
+                                          'Upload Foto',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                        ),
+                      ),
+                    ),
+
+                    if (_selectedImage != null)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: _isSaving
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _selectedImage = null;
+                                  });
+                                },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // KATEGORI
+
+              DropdownButtonFormField<int>(
+                initialValue: _selectedCategoryId,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: 'Kategori Produk',
+                  prefixIcon: const Icon(Icons.category_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                items: categories.map((category) {
+                  return DropdownMenuItem<int>(
+                    value: category.categoryId,
+                    child: Text(
+                      category.categoryName,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                onChanged: _isSaving
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _selectedCategoryId = value;
+                        });
+                      },
+                validator: (value) {
+                  if (value == null) {
+                    return 'Pilih kategori terlebih dahulu';
+                  }
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // SKU DAN NAMA
+
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _skuController,
+                      enabled: !_isSaving,
+                      decoration: InputDecoration(
+                        labelText: 'SKU / Kode',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'SKU wajib diisi';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    flex: 2,
+                    child: TextFormField(
+                      controller: _nameController,
+                      enabled: !_isSaving,
+                      decoration: InputDecoration(
+                        labelText: 'Nama Produk',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Nama wajib diisi';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // HARGA BELI DAN JUAL
+
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _buyPriceController,
+                      enabled: !_isSaving,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        RupiahInputFormatter(),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: 'Harga Beli',
+                        prefixIcon: const Icon(
+                          Icons.payments_outlined,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Harga wajib diisi';
+                        }
+
+                        if (_parseRupiah(value) <= 0) {
+                          return 'Harga tidak valid';
+                        }
+
+                        return null;
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    child: TextFormField(
+                      controller: _sellPriceController,
+                      enabled: !_isSaving,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        RupiahInputFormatter(),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: 'Harga Jual',
+                        prefixIcon: const Icon(
+                          Icons.payments_outlined,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Harga wajib diisi';
+                        }
+
+                        if (_parseRupiah(value) <= 0) {
+                          return 'Harga tidak valid';
+                        }
+
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // STOK
+
+              TextFormField(
+                controller: _stockController,
+                enabled: !_isSaving,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  ThousandsInputFormatter(),
+                ],
+                decoration: InputDecoration(
+                  labelText: 'Jumlah Stok Tersedia',
+                  prefixIcon: const Icon(
+                    Icons.inventory_outlined,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Stok wajib diisi';
+                  }
+
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 24),
+
+              // TOMBOL SIMPAN
+
+              Observer(
+                builder: (_) {
+                  final storeLoading =
+                      widget.productStore.isLoading;
+
+                  final isBusy = _isSaving || storeLoading;
+
+                  return SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E1B4B),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: isBusy ? null : _saveProduct,
+                      child: isBusy
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              _isEdit
+                                  ? 'Simpan Perubahan'
+                                  : 'Tambah Produk',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
