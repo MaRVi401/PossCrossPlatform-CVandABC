@@ -1,9 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
-
+import 'package:intl/intl.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../shared/widgets/main_drawer.dart';
+import '../../../../shared/utils/currency_formatter.dart';
 import '../stores/abc_store.dart';
 
 class ABCBundleScreen extends StatefulWidget {
@@ -27,7 +27,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
 
-      // HEADER STANDAR APLIKASI
+      // HEADER
       appBar: AppBar(
         title: const Text(
           'Smart Optimasi Promo (ABC)',
@@ -79,8 +79,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-
-                  // HEADER BOX INTELLIGENCE SWARM ENGINE
+                  // HEADER INTELLIGENCE SWARM ENGINE
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -128,9 +127,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 12),
-
                         const Text(
                           'Menggunakan Artificial Bee Colony (ABC) untuk menganalisis produk fast-moving dan slow-moving secara otomatis.',
                           style: TextStyle(
@@ -138,9 +135,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                             color: Colors.grey,
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1E1B4B),
@@ -221,11 +216,11 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                             badge: 'FAST MOVING',
                             badgeColor: Colors.green,
                             productName:
-                                _abcStore.bundle?.fastProduct?.productName ?? '-',
+                                _abcStore.bundle?.fastProduct?.productName ??
+                                    '-',
                             sellPrice:
                                 _abcStore.bundle?.fastProduct?.sellPrice ?? 0,
-                            stock:
-                                _abcStore.bundle?.fastProduct?.stock ?? 0,
+                            stock: _abcStore.bundle?.fastProduct?.stock ?? 0,
                           ),
 
                           const SizedBox(height: 12),
@@ -236,11 +231,11 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                             badge: 'SLOW MOVING',
                             badgeColor: Colors.amber.shade800,
                             productName:
-                                _abcStore.bundle?.slowProduct?.productName ?? '-',
+                                _abcStore.bundle?.slowProduct?.productName ??
+                                    '-',
                             sellPrice:
                                 _abcStore.bundle?.slowProduct?.sellPrice ?? 0,
-                            stock:
-                                _abcStore.bundle?.slowProduct?.stock ?? 0,
+                            stock: _abcStore.bundle?.slowProduct?.stock ?? 0,
                           ),
 
                           const SizedBox(height: 16),
@@ -249,7 +244,8 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.indigo.shade50.withValues(alpha: 0.5),
+                              color:
+                                  Colors.indigo.shade50.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: Colors.indigo.shade100,
@@ -271,16 +267,16 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                                       ),
                                     ),
                                     Text(
-                                      'Rp ${_abcStore.bundle!.normalPrice.toStringAsFixed(0)}',
+                                      CurrencyFormatter.format(
+                                        _abcStore.bundle!.normalPrice,
+                                      ),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ],
                                 ),
-
                                 const SizedBox(height: 6),
-
                                 Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
@@ -295,7 +291,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                                       ),
                                     ),
                                     Text(
-                                      '- Rp ${_abcStore.bundle!.discountAmount.toStringAsFixed(0)}',
+                                      '- ${CurrencyFormatter.format(_abcStore.bundle!.discountAmount)}',
                                       style: const TextStyle(
                                         color: Colors.red,
                                         fontWeight: FontWeight.bold,
@@ -303,9 +299,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                                     ),
                                   ],
                                 ),
-
                                 const Divider(height: 16),
-
                                 Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
@@ -320,7 +314,9 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                                       ),
                                     ),
                                     Text(
-                                      'Rp ${_abcStore.bundle!.promoPrice.toStringAsFixed(0)}',
+                                      CurrencyFormatter.format(
+                                        _abcStore.bundle!.promoPrice,
+                                      ),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: Colors.indigo,
@@ -359,9 +355,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                               color: Colors.grey,
                             ),
                           ),
-
                           const SizedBox(height: 12),
-
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
@@ -386,20 +380,18 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                                     color: Colors.indigo,
                                   ),
                                 ),
-
                                 const SizedBox(height: 6),
-
                                 Text(
-                                  'Rp ${_abcStore.bundle!.estimatedProfit.toStringAsFixed(0)}',
+                                  CurrencyFormatter.format(
+                                    _abcStore.bundle!.estimatedProfit,
+                                  ),
                                   style: TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.indigo.shade900,
                                   ),
                                 ),
-
                                 const SizedBox(height: 4),
-
                                 const Text(
                                   'Dihitung dari Harga Promo - Total Harga Beli Modal',
                                   style: TextStyle(
@@ -410,9 +402,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                               ],
                             ),
                           ),
-
                           const SizedBox(height: 16),
-
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green.shade700,
@@ -454,6 +444,10 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
     );
   }
 
+  // ==========================================================
+  // PRODUCT CARD
+  // ==========================================================
+
   Widget _buildProductCard({
     required String title,
     required String badge,
@@ -485,7 +479,6 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                   color: Colors.grey,
                 ),
               ),
-
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 8,
@@ -506,9 +499,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 4),
-
           Text(
             productName,
             style: const TextStyle(
@@ -516,9 +507,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
               fontSize: 15,
             ),
           ),
-
           const SizedBox(height: 8),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -533,7 +522,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                     ),
                   ),
                   Text(
-                    'Rp ${sellPrice.toStringAsFixed(0)}',
+                    CurrencyFormatter.format(sellPrice),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
@@ -541,7 +530,6 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                   ),
                 ],
               ),
-
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -553,7 +541,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
                     ),
                   ),
                   Text(
-                    '$stock Unit',
+                    '${NumberFormat('#,##0', 'id_ID').format(stock)} Unit',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
