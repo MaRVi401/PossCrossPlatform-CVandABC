@@ -34,8 +34,9 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
     super.initState();
     _fetchYoloStats();
 
+    // Polling statistik setiap 2 detik agar tidak memberatkan CPU
     _statsTimer = Timer.periodic(
-      const Duration(seconds: 1),
+      const Duration(seconds: 2),
       (_) => _fetchYoloStats(),
     );
   }
@@ -46,18 +47,19 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
 
       if (response.statusCode == 200 && mounted) {
         final data = response.data;
+        final newCount = data['detected_count'] ?? data['total_detected'] ?? 0;
+        final newHeight = (data['avg_height_cm'] as num?)?.toDouble() ?? 0.0;
 
-        setState(() {
-          _visitorCount = data['detected_count'] ??
-              data['total_detected'] ??
-              0;
-
-          _avgHeight =
-              (data['avg_height_cm'] as num?)?.toDouble() ?? 0.0;
-
-          _isStatsLoading = false;
-          _lastUpdatedTime = DateTime.now();
-        });
+        if (_visitorCount != newCount ||
+            _avgHeight != newHeight ||
+            _isStatsLoading) {
+          setState(() {
+            _visitorCount = newCount;
+            _avgHeight = newHeight;
+            _isStatsLoading = false;
+            _lastUpdatedTime = DateTime.now();
+          });
+        }
       }
     } catch (e) {
       // Abaikan error sementara saat polling
@@ -79,10 +81,9 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
           color: Colors.black,
           child: Stack(
             children: [
-              Center(
+              const Center(
                 child: MjpegStreamPlayer(
                   streamUrl: '${ApiClient.cctvBaseUrl}/video_feed',
-                  onStatusChanged: (connected) {},
                 ),
               ),
               Positioned(
@@ -472,6 +473,10 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
   }
 }
 
+// ==========================================================
+// HIGH PERFORMANCE MJPEG PLAYER (NO LAG / NO FULL REBUILD)
+// ==========================================================
+
 class MjpegStreamPlayer extends StatefulWidget {
   final String streamUrl;
   final ValueChanged<bool>? onStatusChanged;
@@ -487,8 +492,8 @@ class MjpegStreamPlayer extends StatefulWidget {
 }
 
 class _MjpegStreamPlayerState extends State<MjpegStreamPlayer> {
-  Uint8List? _currentFrame;
-  bool _hasError = false;
+  final ValueNotifier<Uint8List?> _frameNotifier = ValueNotifier<Uint8List?>(null);
+  final ValueNotifier<bool> _errorNotifier = ValueNotifier<bool>(false);
 
   StreamSubscription? _subscription;
   HttpClient? _client;
@@ -501,8 +506,7 @@ class _MjpegStreamPlayerState extends State<MjpegStreamPlayer> {
 
   void _connectStream() async {
     if (!mounted) return;
-
-    setState(() => _hasError = false);
+    _errorNotifier.value = false;
 
     try {
       _client = HttpClient();
@@ -520,9 +524,7 @@ class _MjpegStreamPlayerState extends State<MjpegStreamPlayer> {
       final response = await request.close();
 
       if (response.statusCode == 200) {
-        if (widget.onStatusChanged != null) {
-          widget.onStatusChanged!(true);
-        }
+        widget.onStatusChanged?.call(true);
 
         List<int> bytesBuffer = [];
 
@@ -546,12 +548,8 @@ class _MjpegStreamPlayerState extends State<MjpegStreamPlayer> {
                     bytesBuffer.sublist(start, end),
                   );
 
-                  if (mounted) {
-                    setState(() {
-                      _currentFrame = frameBytes;
-                      _hasError = false;
-                    });
-                  }
+                  _frameNotifier.value = frameBytes;
+                  _errorNotifier.value = false;
 
                   bytesBuffer = bytesBuffer.sublist(end);
                   break;
@@ -559,12 +557,8 @@ class _MjpegStreamPlayerState extends State<MjpegStreamPlayer> {
               }
             }
           },
-          onError: (error) {
-            _handleError();
-          },
-          onDone: () {
-            _handleError();
-          },
+          onError: (_) => _handleError(),
+          onDone: () => _handleError(),
           cancelOnError: true,
         );
       } else {
@@ -576,91 +570,99 @@ class _MjpegStreamPlayerState extends State<MjpegStreamPlayer> {
   }
 
   void _handleError() {
-    if (mounted) {
-      setState(() => _hasError = true);
-      if (widget.onStatusChanged != null) {
-        widget.onStatusChanged!(false);
-      }
-    }
+    _errorNotifier.value = true;
+    widget.onStatusChanged?.call(false);
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
     _client?.close();
+    _frameNotifier.dispose();
+    _errorNotifier.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_hasError) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.videocam_off,
-              size: 40,
-              color: Colors.redAccent,
+    return ValueListenableBuilder<bool>(
+      valueListenable: _errorNotifier,
+      builder: (context, hasError, child) {
+        if (hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.videocam_off,
+                  size: 40,
+                  color: Colors.redAccent,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Gagal Terhubung ke Stream CCTV',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white12,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    _subscription?.cancel();
+                    _client?.close();
+                    _connectStream();
+                  },
+                  icon: const Icon(
+                    Icons.refresh,
+                    size: 16,
+                  ),
+                  label: const Text(
+                    'Coba Lagi',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Gagal Terhubung ke Stream CCTV',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white12,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                _subscription?.cancel();
-                _client?.close();
-                _connectStream();
-              },
-              icon: const Icon(
-                Icons.refresh,
-                size: 16,
-              ),
-              label: const Text(
-                'Coba Lagi',
-                style: TextStyle(fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+          );
+        }
 
-    if (_currentFrame == null) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              color: Colors.white,
-            ),
-            SizedBox(height: 12),
-            Text(
-              'Memuat Stream CCTV (YOLOv8)...',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+        return ValueListenableBuilder<Uint8List?>(
+          valueListenable: _frameNotifier,
+          builder: (context, currentFrame, child) {
+            if (currentFrame == null) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      'Memuat Stream CCTV (YOLOv8)...',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
 
-    return Image.memory(
-      _currentFrame!,
-      fit: BoxFit.contain,
-      gaplessPlayback: true,
+            return Image.memory(
+              currentFrame,
+              fit: BoxFit.contain,
+              gaplessPlayback: true,
+            );
+          },
+        );
+      },
     );
   }
 }
