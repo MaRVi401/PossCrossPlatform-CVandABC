@@ -248,7 +248,7 @@ class PosDashboardScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '4 Fitur',
+                  '5 Fitur',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -276,7 +276,6 @@ class PosDashboardScreen extends StatelessWidget {
                     const Color(0xFFEA580C),
                     const Color(0xFFF97316),
                   ],
-                  badgeText: 'UTAMA',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -330,6 +329,24 @@ class PosDashboardScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const StockAdjustmentScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildModernMenuCard(
+                  context,
+                  title: 'Laporan Penjualan',
+                  subtitle: 'Export PDF & Excel',
+                  icon: Icons.analytics_rounded,
+                  gradientColors: [
+                    const Color(0xFF059669),
+                    const Color(0xFF10B981),
+                  ],
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SalesReportScreen(),
                       ),
                     );
                   },
@@ -427,25 +444,6 @@ class PosDashboardScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const ABCBundleScreen(),
-                      ),
-                    );
-                  },
-                ),
-                _buildModernMenuCard(
-                  context,
-                  title: 'Laporan Penjualan',
-                  subtitle: 'Export PDF & Excel',
-                  icon: Icons.analytics_rounded,
-                  gradientColors: [
-                    const Color(0xFF059669),
-                    const Color(0xFF10B981),
-                  ],
-                  badgeText: 'REPORT',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const SalesReportScreen(),
                       ),
                     );
                   },
