@@ -584,6 +584,7 @@ class _PosScreenState extends State<PosScreen> {
         title: const Text(
           'Kasir Penjualan (POS)',
           style: TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),

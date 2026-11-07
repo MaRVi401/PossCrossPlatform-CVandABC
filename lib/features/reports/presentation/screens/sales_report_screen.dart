@@ -56,7 +56,9 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
       appBar: AppBar(
         title: const Text(
           'Laporan Penjualan',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF1E1B4B),
         foregroundColor: Colors.white,

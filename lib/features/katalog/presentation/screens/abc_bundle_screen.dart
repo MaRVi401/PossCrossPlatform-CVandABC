@@ -32,6 +32,7 @@ class _ABCBundleScreenState extends State<ABCBundleScreen> {
         title: const Text(
           'Smart Optimasi Promo (ABC)',
           style: TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),

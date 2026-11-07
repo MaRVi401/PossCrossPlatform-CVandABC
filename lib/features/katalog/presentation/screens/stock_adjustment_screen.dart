@@ -183,6 +183,7 @@ class _StockAdjustmentScreenState
         title: const Text(
           'Riwayat Penyesuaian Stok',
           style: TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),

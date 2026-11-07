@@ -394,6 +394,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
         title: const Text(
           'Manajemen Kategori',
           style: TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),

@@ -115,6 +115,7 @@ class _CCTVAnalyticsScreenState extends State<CCTVAnalyticsScreen> {
         title: const Text(
           'CCTV Analytics (YOLOv8)',
           style: TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),

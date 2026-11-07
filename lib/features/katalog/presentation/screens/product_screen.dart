@@ -1,4 +1,3 @@
-
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -153,8 +152,7 @@ class _ProductScreenState extends State<ProductScreen> {
       return null;
     }
 
-    if (rawUrl.startsWith('http://') ||
-        rawUrl.startsWith('https://')) {
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
       return rawUrl;
     }
 
@@ -189,21 +187,15 @@ class _ProductScreenState extends State<ProductScreen> {
     );
 
     final buyPriceController = TextEditingController(
-      text: product == null
-          ? ''
-          : CurrencyFormatter.format(product.buyPrice),
+      text: product == null ? '' : CurrencyFormatter.format(product.buyPrice),
     );
 
     final sellPriceController = TextEditingController(
-      text: product == null
-          ? ''
-          : CurrencyFormatter.format(product.sellPrice),
+      text: product == null ? '' : CurrencyFormatter.format(product.sellPrice),
     );
 
     final stockController = TextEditingController(
-      text: product == null
-          ? '0'
-          : _formatStock(product.stockQuantity),
+      text: product == null ? '0' : _formatStock(product.stockQuantity),
     );
 
     int? selectedCategoryId = product?.categoryId ??
@@ -316,8 +308,8 @@ class _ProductScreenState extends State<ProductScreen> {
                                   color: Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: const Color(0xFF1E1B4B)
-                                        .withAlpha(70),
+                                    color:
+                                        const Color(0xFF1E1B4B).withAlpha(70),
                                     width: 1.5,
                                   ),
                                 ),
@@ -597,18 +589,15 @@ class _ProductScreenState extends State<ProductScreen> {
                                       }
 
                                       // Konversi semua input ke angka murni.
-                                      final double buyPrice =
-                                          _parseRupiah(
+                                      final double buyPrice = _parseRupiah(
                                         buyPriceController.text,
                                       );
 
-                                      final double sellPrice =
-                                          _parseRupiah(
+                                      final double sellPrice = _parseRupiah(
                                         sellPriceController.text,
                                       );
 
-                                      final int stockQuantity =
-                                          _parseStock(
+                                      final int stockQuantity = _parseStock(
                                         stockController.text,
                                       );
 
@@ -642,8 +631,7 @@ class _ProductScreenState extends State<ProductScreen> {
                                           );
                                         }
 
-                                        if (!mounted ||
-                                            !modalContext.mounted) {
+                                        if (!mounted || !modalContext.mounted) {
                                           return;
                                         }
 
@@ -761,8 +749,7 @@ class _ProductScreenState extends State<ProductScreen> {
                     _showMessage('Produk berhasil dihapus');
                   } else {
                     _showMessage(
-                      _productStore.errorMessage ??
-                          'Gagal menghapus produk',
+                      _productStore.errorMessage ?? 'Gagal menghapus produk',
                       isError: true,
                     );
                   }
@@ -792,7 +779,9 @@ class _ProductScreenState extends State<ProductScreen> {
       appBar: AppBar(
         title: const Text(
           'Manajemen Produk',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF1E1B4B),
         foregroundColor: Colors.white,
@@ -863,8 +852,7 @@ class _ProductScreenState extends State<ProductScreen> {
           Expanded(
             child: Observer(
               builder: (_) {
-                if (_productStore.isLoading &&
-                    _productStore.products.isEmpty) {
+                if (_productStore.isLoading && _productStore.products.isEmpty) {
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -911,14 +899,11 @@ class _ProductScreenState extends State<ProductScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
                     itemCount: _productStore.filteredProducts.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: 10),
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
-                      final product =
-                          _productStore.filteredProducts[index];
+                      final product = _productStore.filteredProducts[index];
 
-                      final imageUrl =
-                          _resolveImageUrl(product.imageUrl);
+                      final imageUrl = _resolveImageUrl(product.imageUrl);
 
                       final isLowStock = product.stockQuantity < 5;
 
