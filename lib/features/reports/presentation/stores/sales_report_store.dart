@@ -167,7 +167,7 @@ abstract class _SalesReportStoreBase with Store {
 
         debugPrint('File Excel berhasil tersimpan di: $filePath');
 
-        // Buka file Excel secara native jika ada app-nya
+        // Buka file Excel secara native
         final result = await OpenFilex.open(filePath);
         return result.type == ResultType.done || result.type == ResultType.noAppToOpen;
       }
