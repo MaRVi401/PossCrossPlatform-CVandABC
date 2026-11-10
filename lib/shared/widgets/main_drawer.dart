@@ -9,6 +9,7 @@ import '../../features/katalog/presentation/screens/product_screen.dart';
 import '../../features/katalog/presentation/screens/stock_adjustment_screen.dart';
 import '../../features/pos/presentation/screens/pos_screen.dart';
 import '../../features/reports/presentation/screens/sales_report_screen.dart';
+import '../../features/chatbot/presentation/screens/chatbot_screen.dart';
 
 class MainDrawer extends StatelessWidget {
   final String currentRoute;
@@ -255,6 +256,26 @@ class MainDrawer extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                             builder: (_) => const SalesReportScreen()),
+                      );
+                    }
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.smart_toy_outlined,
+                  activeIcon: Icons.smart_toy_rounded,
+                  title: 'AI Assistant',
+                  isSelected: currentRoute == 'chatbot',
+                  activeColor:
+                      const Color(0xFFF59E0B),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (currentRoute != 'chatbot') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ChatbotScreen(),
+                        ),
                       );
                     }
                   },

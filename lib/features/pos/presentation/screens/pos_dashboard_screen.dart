@@ -8,6 +8,7 @@ import '../../../katalog/presentation/screens/category_screen.dart';
 import '../../../katalog/presentation/screens/product_screen.dart';
 import '../../../katalog/presentation/screens/stock_adjustment_screen.dart';
 import '../../../reports/presentation/screens/sales_report_screen.dart';
+import '../../../chatbot/presentation/screens/chatbot_screen.dart';
 import 'pos_screen.dart';
 
 class PosDashboardScreen extends StatelessWidget {
@@ -347,6 +348,24 @@ class PosDashboardScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const SalesReportScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildModernMenuCard(
+                  context,
+                  title: 'AI Assistant',
+                  subtitle: 'Tanya Stok & Laporan',
+                  icon: Icons.smart_toy_rounded,
+                  gradientColors: [
+                    const Color(0xFFD97706), // Amber Dark
+                    const Color(0xFFF59E0B), // Amber Light
+                  ],
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ChatbotScreen(),
                       ),
                     );
                   },

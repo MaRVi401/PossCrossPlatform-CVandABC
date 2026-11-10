@@ -31,6 +31,10 @@ import '../../features/katalog/presentation/stores/stock_adjustment_store.dart';
 import '../../features/pos/data/datasources/transaction_remote_datasource.dart';
 import '../../features/pos/presentation/stores/pos_store.dart';
 
+// Chatbot
+import '../../features/chatbot/data/datasources/chatbot_remote_datasource.dart';
+import '../../features/chatbot/presentation/stores/chatbot_store.dart';
+
 // Reports
 import '../../features/reports/presentation/stores/sales_report_store.dart';
 
@@ -103,4 +107,14 @@ Future<void> initInjections() async {
 
   // Sales Report Injection
   sl.registerLazySingleton<SalesReportStore>(() => SalesReportStore());
+
+  // Chatbot Injection
+  sl.registerLazySingleton<ChatbotRemoteDataSource>(
+    () => ChatbotRemoteDataSourceImpl(apiClient: sl()),
+  );
+
+  // Chatbot Store Injection
+  sl.registerLazySingleton<ChatbotStore>(
+    () => ChatbotStore(sl()),
+  );
 }

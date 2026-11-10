@@ -327,7 +327,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
           ),
         ],
       ),
-      drawer: const MainDrawer(currentRoute: '/reports/sales'),
+      drawer: const MainDrawer(currentRoute: 'sales_report'),
       body: Column(
         children: [
           // Filter Tanggal & Action Export
